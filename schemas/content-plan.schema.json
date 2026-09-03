@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-visualizer.local/schemas/content-plan.schema.json",
+  "title": "Paper Visualizer Content Plan",
+  "type": "object",
+  "required": ["schema_version", "stage_version", "paper_id", "source_ir_sha256", "paper_metadata", "sections", "items", "visual_requests", "placement_ledger", "coverage", "omissions", "source_index", "review"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "stage_version": {"type": "string", "minLength": 1},
+    "paper_id": {"$ref": "#/$defs/id"},
+    "source_ir_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "paper_metadata": {"$ref": "#/$defs/paper_metadata"},
+    "sections": {
+      "type": "array",
+      "minItems": 11,
+      "maxItems": 11,
+      "items": {"$ref": "#/$defs/section"}
+    },
+    "items": {"type": "array", "items": {"$ref": "#/$defs/item"}},
+    "visual_requests": {"type": "array", "items": {"$ref": "#/$defs/visual_request"}},
+    "placement_ledger": {"type": "array", "items": {"$ref": "#/$defs/placement"}},
+    "coverage": {"type": "array", "items": {"$ref": "#/$defs/coverage"}},
+    "omissions": {"type": "array", "items": {"$ref": "#/$defs/omission"}},
+    "source_index": {"type": "array", "items": {"$ref": "#/$defs/source_entry"}},
+    "review": {"$ref": "#/$defs/review"}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[a-z][a-z0-9._:-]{2,127}$"},
+    "section_kind": {
+      "enum": ["one_minute_read", "research_task", "existing_methods", "motivation", "method_overview", "method_details", "training_inference", "experimental_setup", "main_results", "analysis", "conclusion_limitations"]
+    },
+    "paper_metadata": {
+      "type": "object",
+      "required": ["title", "authors", "affiliations", "venue", "published_at", "doi", "arxiv_id"],
+      "properties": {
+        "title": {"type": "string", "minLength": 1},
+        "authors": {"type": "array", "items": {"type": "string"}},
+        "affiliations": {"type": "array", "items": {"type": "string"}},
+        "venue": {"type": ["string", "null"]},
+        "published_at": {"type": ["string", "null"]},
+        "doi": {"type": ["string", "null"]},
+        "arxiv_id": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "section": {
+      "type": "object",
+      "required": ["id", "kind", "title", "status", "item_ids"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "kind": {"$ref": "#/$defs/section_kind"},
+        "title": {"type": "string", "minLength": 1},
+        "status": {"enum": ["complete", "fallback", "unavailable"]},
+        "item_ids": {"type": "array", "items": {"$ref": "#/$defs/id"}},
+        "fallback_reason": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "item": {
+      "type": "object",
+      "required": ["id", "content_type", "title", "primary_section", "source_ids", "evidence_ids", "support_status"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "content_type": {"enum": ["narrative", "formula", "paper_visual", "table", "citation"]},
+        "title": {"type": "string", "minLength": 1},
+        "body": {"type": ["string", "null"]},
+        "display_label": {"type": ["string", "null"]},
+        "generation": {"enum": ["source_grounded", "llm"]},
+        "primary_section": {"$ref": "#/$defs/section_kind"},
+        "source_ids": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/id"}},
+        "evidence_ids": {"type": "array", "items": {"$ref": "#/$defs/id"}},
+        "support_status": {"enum": ["verified", "pending"]},
+        "claim_id": {"$ref": "#/$defs/id"},
+        "formula_id": {"$ref": "#/$defs/id"},
+        "variable_ids": {"type": "array", "items": {"$ref": "#/$defs/id"}},
+        "visual_id": {"$ref": "#/$defs/id"},
+        "table_id": {"$ref": "#/$defs/id"},
+        "citation_id": {"$ref": "#/$defs/id"},
+        "node_ids": {"type": "array", "items": {"$ref": "#/$defs/id"}},
+        "edge_ids": {"type": "array", "items": {"$ref": "#/$defs/id"}}
+      },
+      "additionalProperties": false
+    },
+    "visual_request": {
+      "type": "object",
+      "required": ["id", "section_id", "purpose", "semantic_intent", "candidate_entity_ids", "derived_from", "evidence_ids", "caption_policy", "interaction_policy"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "section_id": {"$ref": "#/$defs/id"},
+        "purpose": {"type": "string", "minLength": 1},
+        "semantic_intent": {"enum": ["process", "compare", "relation", "timeline", "original_figure", "original_table"]},
+        "candidate_entity_ids": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/id"}},
+        "derived_from": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/id"}},
+        "evidence_ids": {"type": "array", "items": {"$ref": "#/$defs/id"}},
+        "caption_policy": {"enum": ["show_official_once", "label_derived_only", "none"]},
+        "interaction_policy": {"enum": ["body_evidence_only", "source_jump_only", "static"]}
+      },
+      "additionalProperties": false
+    },
+    "placement": {
+      "type": "object",
+      "required": ["source_id", "primary_section_id", "reuse_policy", "secondary_section_ids"],
+      "properties": {
+        "source_id": {"$ref": "#/$defs/id"},
+        "primary_section_id": {"$ref": "#/$defs/id"},
+        "reuse_policy": {"enum": ["primary_only", "summary_then_detail", "link_only"]},
+        "secondary_section_ids": {"type": "array", "items": {"$ref": "#/$defs/id"}}
+      },
+      "additionalProperties": false
+    },
+    "coverage": {
+      "type": "object",
+      "required": ["facet", "status", "source_ids", "reason"],
+      "properties": {
+        "facet": {"enum": ["research_question", "core_approach", "key_finding", "formula", "experiment", "related_context", "source_traceability"]},
+        "status": {"enum": ["covered", "fallback", "missing"]},
+        "source_ids": {"type": "array", "items": {"$ref": "#/$defs/id"}},
+        "reason": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "omission": {
+      "type": "object",
+      "required": ["section_kind", "reason"],
+      "properties": {
+        "section_kind": {"$ref": "#/$defs/section_kind"},
+        "reason": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "source_entry": {
+      "type": "object",
+      "required": ["source_id", "source_type", "evidence_ids"],
+      "properties": {
+        "source_id": {"$ref": "#/$defs/id"},
+        "source_type": {"enum": ["evidence", "claim", "formula", "variable", "visual", "table", "citation", "relation"]},
+        "evidence_ids": {"type": "array", "items": {"$ref": "#/$defs/id"}}
+      },
+      "additionalProperties": false
+    },
+    "review": {
+      "type": "object",
+      "required": ["status", "warnings", "overlay_applied"],
+      "properties": {
+        "status": {"enum": ["passed", "needs_review"]},
+        "warnings": {"type": "array", "items": {"type": "string"}},
+        "overlay_applied": {"type": "boolean"},
+        "reviewer": {"type": ["string", "null"]},
+        "reason": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    }
+  }
+}

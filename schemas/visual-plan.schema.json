@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-visualizer.local/schemas/visual-plan.schema.json",
+  "title": "Paper Visualizer Visual Plan",
+  "type": "object",
+  "required": ["schema_version", "stage_version", "paper_id", "source_ir_sha256", "source_content_plan_sha256", "selection_policy", "visuals", "request_coverage", "review"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "stage_version": {"type": "string", "minLength": 1},
+    "paper_id": {"$ref": "#/$defs/id"},
+    "source_ir_sha256": {"$ref": "#/$defs/sha256"},
+    "source_content_plan_sha256": {"$ref": "#/$defs/sha256"},
+    "selection_policy": {
+      "type": "object",
+      "required": ["order", "derived_visual_rule", "interaction_rule"],
+      "properties": {
+        "order": {"const": "paper_original_first"},
+        "derived_visual_rule": {"const": "only_when_supported_by_verified_ir"},
+        "interaction_rule": {"const": "body_evidence_only"}
+      },
+      "additionalProperties": false
+    },
+    "visuals": {"type": "array", "items": {"$ref": "#/$defs/visual"}},
+    "request_coverage": {"type": "array", "items": {"$ref": "#/$defs/request_coverage"}},
+    "review": {"$ref": "#/$defs/review"}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[a-z][a-z0-9._:-]{2,127}$"},
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "point": {
+      "type": "object",
+      "required": ["x", "y"],
+      "properties": {"x": {"type": "number"}, "y": {"type": "number"}},
+      "additionalProperties": false
+    },
+    "label_ref": {
+      "type": "object",
+      "required": ["source_id", "field"],
+      "properties": {
+        "source_id": {"$ref": "#/$defs/id"},
+        "field": {"enum": ["title", "summary", "verbatim_text", "latex", "symbol", "caption", "raw_reference", "cell_value"]},
+        "row": {"type": "integer", "minimum": 0},
+        "column": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "target": {
+      "type": "object",
+      "required": ["id", "source_id", "evidence_ids", "interactive", "label_ref"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "source_id": {"$ref": "#/$defs/id"},
+        "evidence_ids": {"type": "array", "items": {"$ref": "#/$defs/id"}},
+        "interactive": {"type": "boolean"},
+        "label_ref": {"$ref": "#/$defs/label_ref"}
+      },
+      "additionalProperties": false
+    },
+    "node": {
+      "type": "object",
+      "required": ["id", "source_id", "shape", "position", "size", "label_ref", "target_id"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "source_id": {"$ref": "#/$defs/id"},
+        "shape": {"enum": ["rect", "rounded_rect", "circle"]},
+        "position": {"$ref": "#/$defs/point"},
+        "size": {
+          "type": "object",
+          "required": ["width", "height"],
+          "properties": {"width": {"type": "number", "exclusiveMinimum": 0}, "height": {"type": "number", "exclusiveMinimum": 0}},
+          "additionalProperties": false
+        },
+        "label_ref": {"$ref": "#/$defs/label_ref"},
+        "target_id": {"oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]}
+      },
+      "additionalProperties": false
+    },
+    "edge": {
+      "type": "object",
+      "required": ["id", "source_node_id", "target_node_id", "line", "marker", "source_ids"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "source_node_id": {"$ref": "#/$defs/id"},
+        "target_node_id": {"$ref": "#/$defs/id"},
+        "line": {"enum": ["solid", "dashed"]},
+        "marker": {"enum": ["none", "arrow"]},
+        "source_ids": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/id"}}
+      },
+      "additionalProperties": false
+    },
+    "mark": {
+      "type": "object",
+      "required": ["id", "source_id", "mark", "position", "size", "value", "label_ref", "target_id"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "source_id": {"$ref": "#/$defs/id"},
+        "mark": {"enum": ["bar", "point", "cell"]},
+        "position": {"$ref": "#/$defs/point"},
+        "size": {
+          "type": "object",
+          "required": ["width", "height"],
+          "properties": {"width": {"type": "number", "minimum": 0}, "height": {"type": "number", "minimum": 0}},
+          "additionalProperties": false
+        },
+        "value": {"type": "number"},
+        "label_ref": {"$ref": "#/$defs/label_ref"},
+        "target_id": {"oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]}
+      },
+      "additionalProperties": false
+    },
+    "layout": {
+      "type": "object",
+      "required": ["engine", "view_box", "direction", "nodes", "edges", "marks"],
+      "properties": {
+        "engine": {"enum": ["source_asset", "table_grid", "layered_dag", "cluster_graph", "bar_chart"]},
+        "view_box": {
+          "type": "array",
+          "prefixItems": [{"type": "number"}, {"type": "number"}, {"type": "number", "exclusiveMinimum": 0}, {"type": "number", "exclusiveMinimum": 0}],
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "direction": {"enum": ["none", "left_to_right", "top_to_bottom", "radial"]},
+        "nodes": {"type": "array", "items": {"$ref": "#/$defs/node"}},
+        "edges": {"type": "array", "items": {"$ref": "#/$defs/edge"}},
+        "marks": {"type": "array", "items": {"$ref": "#/$defs/mark"}}
+      },
+      "additionalProperties": false
+    },
+    "description": {
+      "type": "object",
+      "required": ["display_label", "text", "source_ids"],
+      "properties": {
+        "display_label": {"const": "派生图"},
+        "text": {"type": "string", "minLength": 1},
+        "source_ids": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/id"}}
+      },
+      "additionalProperties": false
+    },
+    "visual": {
+      "type": "object",
+      "required": ["id", "request_id", "section_id", "kind", "visual_type", "placement_role", "source_entity_ids", "derived_from", "caption_policy", "asset_entity_id", "layout", "targets"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "request_id": {"$ref": "#/$defs/id"},
+        "section_id": {"$ref": "#/$defs/id"},
+        "kind": {"enum": ["paper_original", "derived"]},
+        "visual_type": {"enum": ["figure", "table", "flow", "comparison", "relation", "timeline", "matrix"]},
+        "placement_role": {"enum": ["primary", "supplementary"]},
+        "source_entity_ids": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/id"}},
+        "derived_from": {"type": "array", "items": {"$ref": "#/$defs/id"}},
+        "caption_policy": {"enum": ["show_official_once", "label_derived_only", "none"]},
+        "asset_entity_id": {"oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]},
+        "description": {"$ref": "#/$defs/description"},
+        "layout": {"$ref": "#/$defs/layout"},
+        "targets": {"type": "array", "items": {"$ref": "#/$defs/target"}}
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {"if": {"properties": {"kind": {"const": "derived"}}}, "then": {"required": ["description"], "properties": {"derived_from": {"minItems": 1}, "asset_entity_id": {"type": "null"}}}},
+        {"if": {"properties": {"kind": {"const": "paper_original"}}}, "then": {"properties": {"derived_from": {"maxItems": 0}}}}
+      ]
+    },
+    "request_coverage": {
+      "type": "object",
+      "required": ["request_id", "status", "visual_ids", "reason"],
+      "properties": {
+        "request_id": {"$ref": "#/$defs/id"},
+        "status": {"enum": ["fulfilled", "partial", "omitted"]},
+        "visual_ids": {"type": "array", "items": {"$ref": "#/$defs/id"}},
+        "reason": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "review": {
+      "type": "object",
+      "required": ["status", "warnings"],
+      "properties": {
+        "status": {"enum": ["passed", "needs_review"]},
+        "warnings": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    }
+  }
+}

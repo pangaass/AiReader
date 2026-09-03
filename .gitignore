@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+cache/
+artifacts/
+output/
+reports/
+artifacts/*/source.pdf
+artifacts/*/parsed/pages/
+artifacts/*/parsed/figures/
+tmp/
+.env
+paper-reader-app/node_modules/

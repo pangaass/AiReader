@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob: file:; script-src 'self'; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:; img-src 'self' data: blob: file:; frame-src file:;" />
+    <title>Paper Visualizer Reader</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand-area">
+          <button id="sidebar-toggle" class="icon-button sidebar-toggle" aria-label="隐藏论文目录" aria-pressed="false">☰</button>
+          <div class="brand"><span class="brand-mark">P</span><div><strong>Paper Visualizer</strong><span>可追溯论文阅读器</span></div></div>
+        </div>
+        <div class="paper-heading"><strong id="paper-title">请选择论文</strong><span id="paper-meta">可视化内容 · 原文坐标对齐</span></div>
+        <div class="top-actions">
+          <button id="llm-button" class="ghost-button"><span class="status-dot"></span>本地解析</button>
+          <button id="folder-button" class="ghost-button">打开文件夹</button>
+          <button id="open-button" class="primary-button">＋ 打开 PDF</button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="sidebar panel">
+          <section class="sidebar-section paper-section">
+            <div class="section-title"><span>论文目录</span><span id="paper-count">0</span></div>
+            <div id="library-folder" class="library-folder">项目示例</div>
+            <div id="paper-list" class="paper-list"></div>
+          </section>
+          <section class="sidebar-section outline-section">
+            <div class="section-title"><span>文章目录</span><span id="outline-count">0</span></div>
+            <nav id="outline" class="outline"></nav>
+          </section>
+        </aside>
+
+        <section class="visualizer-panel panel">
+          <div class="panel-header">
+            <div><span class="eyebrow">LLM VISUALIZER</span><h1>论文可视化</h1></div>
+            <div class="visualizer-actions"><span id="visualizer-status" class="integration-status">等待载入</span><button id="build-button" class="build-button" disabled>构建 Visualizer</button></div>
+          </div>
+          <div class="visualizer-stage">
+            <div id="visualizer-placeholder" class="empty-state">
+              <div class="empty-icon">◇</div><h2>这篇论文还没有 Visualizer</h2><p>点击上方“构建 Visualizer”，启动多阶段 Agent 流水线。</p>
+            </div>
+            <div id="build-progress" class="build-progress hidden"><div class="build-orbit"><span></span></div><strong id="build-title">正在构建 Visualizer</strong><span id="build-stage">准备 Agent 流水线…</span><div class="progress-track"><span id="build-progress-bar"></span></div><small id="build-progress-detail">解析 → 建模 → 论文故事 → 可视化 → 页面生成 → 审核</small></div>
+            <webview id="visualizer-view" class="visualizer-view hidden" partition="paper-visualizer" allowpopups="false"></webview>
+          </div>
+        </section>
+
+        <section class="pdf-panel panel">
+          <div class="pdf-toolbar">
+            <div><span class="eyebrow">SOURCE PDF</span><strong id="pdf-page-label">原始论文</strong></div>
+            <div class="zoom-controls"><button id="zoom-out" aria-label="缩小">−</button><span id="zoom-label">120%</span><button id="zoom-in" aria-label="放大">＋</button></div>
+          </div>
+          <div id="source-hint" class="source-hint hidden"><strong id="source-kind">已定位原文</strong><span id="source-text"></span></div>
+          <div id="pdf-scroll" class="pdf-scroll">
+            <div id="pdf-placeholder" class="pdf-placeholder">PDF 原文将在这里显示</div>
+            <div id="pdf-pages" class="pdf-pages"></div>
+          </div>
+        </section>
+      </main>
+
+      <div id="loading" class="loading-overlay hidden"><div class="loader"></div><strong>正在载入论文</strong><span id="loading-text">提取原文坐标并连接可视化…</span></div>
+
+      <dialog id="llm-dialog" class="settings-dialog">
+        <form method="dialog">
+          <div class="dialog-title"><div><span class="eyebrow">OPTIONAL</span><h2>LLM 增强分析</h2></div><button value="cancel" class="icon-button">×</button></div>
+          <p>用于增强复杂表格识别。Token 由 Electron 调用系统安全存储加密保存，不写入项目或浏览器存储。</p>
+          <label>Endpoint<input id="api-endpoint" type="url" autocomplete="off" placeholder="https://api.openai.com/v1" /></label>
+          <label>Token<input id="api-key" type="password" autocomplete="off" placeholder="尚未配置" /></label>
+          <label>Model Name<input id="model-name" autocomplete="off" /></label>
+          <div class="dialog-actions"><button value="cancel" class="ghost-button">取消</button><button id="enable-llm" value="default" class="primary-button">启用并重新解析</button></div>
+        </form>
+      </dialog>
+
+      <div id="toast" class="toast hidden"></div>
+    </div>
+    <script type="module" src="renderer.js"></script>
+  </body>
+</html>

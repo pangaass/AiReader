@@ -1,0 +1,11 @@
+{
+  "max_download_mb": 80,
+  "request_timeout_seconds": 45,
+  "max_attempts": 3,
+  "render_dpi": 144,
+  "verify_related_work": false,
+  "api_key_env_names": [
+    "AMINER_API_KEY",
+    "OPENAI_API_KEY"
+  ]
+}

@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "paper-visualizer"
+version = "0.1.0"
+description = "Evidence-grounded, multi-agent paper visualizer"
+requires-python = ">=3.11"
+dependencies = [
+  "jinja2>=3.1",
+  "jsonschema>=4.20",
+  "Pillow>=10.0",
+  "pypdf>=5.0"
+]
+
+[project.optional-dependencies]
+enhanced = ["pymupdf>=1.24"]
+test = ["pytest>=8.0"]
+
+[project.scripts]
+paper-visualizer = "paper_visualizer.cli:main"
+
+[tool.setuptools]
+packages = ["paper_visualizer", "paper_visualizer.agents", "paper_visualizer.parsing", "paper_visualizer.modeling", "paper_visualizer.planning", "paper_visualizer.visuals", "paper_visualizer.related", "paper_visualizer.rendering", "paper_visualizer.review", "paper_visualizer.orchestration"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

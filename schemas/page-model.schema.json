@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-visualizer.local/schemas/page-model.schema.json",
+  "title": "Paper Visualizer Page Model",
+  "type": "object",
+  "required": ["schema_version", "stage_version", "source_hashes", "paper", "preview", "navigation", "sections", "evidence"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "stage_version": {"type": "string", "minLength": 1},
+    "source_hashes": {
+      "type": "object",
+      "required": ["ir", "content_plan", "visual_plan", "related_work"],
+      "properties": {
+        "ir": {"$ref": "#/$defs/sha256"},
+        "content_plan": {"$ref": "#/$defs/sha256"},
+        "visual_plan": {"$ref": "#/$defs/sha256"},
+        "related_work": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]}
+      },
+      "additionalProperties": false
+    },
+    "paper": {
+      "type": "object",
+      "required": ["id", "title", "authors", "affiliations", "year", "venue", "published_at", "doi", "arxiv_id", "abstract", "external_url", "pdf_url", "page_count"],
+      "properties": {
+        "id": {"type": "string"}, "title": {"type": "string", "minLength": 1},
+        "authors": {"type": "array", "items": {"type": "string"}},
+        "affiliations": {"type": "array", "items": {"type": "string"}},
+        "year": {"type": ["integer", "null"]},
+        "venue": {"type": ["string", "null"]}, "published_at": {"type": ["string", "null"]},
+        "doi": {"type": ["string", "null"]}, "arxiv_id": {"type": ["string", "null"]},
+        "abstract": {"type": "string"},
+        "external_url": {"type": ["string", "null"]}, "pdf_url": {"type": ["string", "null"]},
+        "page_count": {"type": ["integer", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "preview": {"type": "boolean"},
+    "navigation": {"type": "array", "items": {"$ref": "#/$defs/navigation"}},
+    "sections": {"type": "array", "minItems": 11, "maxItems": 11, "items": {"$ref": "#/$defs/section"}},
+    "evidence": {"type": "object", "additionalProperties": {"$ref": "#/$defs/evidence"}}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "navigation": {
+      "type": "object", "required": ["id", "label"],
+      "properties": {"id": {"type": "string"}, "label": {"type": "string"}}, "additionalProperties": false
+    },
+    "section": {
+      "type": "object", "required": ["id", "kind", "number", "title", "intro", "status", "fallback_reason", "components"],
+      "properties": {
+        "id": {"type": "string"}, "kind": {"type": "string"}, "number": {"type": "string"},
+        "title": {"type": "string"}, "intro": {"type": "string"},
+        "status": {"enum": ["complete", "fallback", "unavailable"]},
+        "fallback_reason": {"type": ["string", "null"]},
+        "components": {"type": "array", "items": {"type": "object"}}
+      },
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "object", "required": ["id", "verbatim_text", "page", "href", "section_id"],
+      "properties": {
+        "id": {"type": "string"}, "verbatim_text": {"type": "string", "minLength": 1},
+        "page": {"type": "integer", "minimum": 1}, "href": {"type": ["string", "null"]},
+        "section_id": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    }
+  }
+}

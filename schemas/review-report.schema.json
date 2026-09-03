@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-visualizer.local/schemas/review-report.schema.json",
+  "title": "Paper Visualizer Independent Review Report",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "stage_version",
+    "paper_id",
+    "status",
+    "input_hashes",
+    "summary",
+    "checks",
+    "browser_hooks"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "stage_version": {"type": "string", "minLength": 1},
+    "paper_id": {"type": "string", "minLength": 1},
+    "status": {"enum": ["passed", "failed"]},
+    "input_hashes": {
+      "type": "object",
+      "required": ["paper_ir", "page_model", "html"],
+      "properties": {
+        "paper_ir": {"$ref": "#/$defs/sha256"},
+        "page_model": {"$ref": "#/$defs/sha256"},
+        "html": {"$ref": "#/$defs/sha256"},
+        "parsed_document": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+        "human_review_overlay": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+        "content_plan": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+        "visual_plan": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+        "related_work": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]}
+      },
+      "additionalProperties": false
+    },
+    "summary": {
+      "type": "object",
+      "required": ["blocker_count", "warning_count", "passed_count", "skipped_count"],
+      "properties": {
+        "blocker_count": {"type": "integer", "minimum": 0},
+        "warning_count": {"type": "integer", "minimum": 0},
+        "passed_count": {"type": "integer", "minimum": 0},
+        "skipped_count": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/check"}
+    },
+    "browser_hooks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/browser_hook"}
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "check": {
+      "type": "object",
+      "required": ["id", "category", "severity", "status", "message", "evidence"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9._:-]{2,127}$"},
+        "category": {
+          "enum": [
+            "schema", "upstream_status", "evidence", "pdf_jump", "caption",
+            "formula", "links", "duplication", "interaction", "mobile",
+            "accessibility", "hardcoding", "security", "browser"
+          ]
+        },
+        "severity": {"enum": ["blocker", "warning"]},
+        "status": {"enum": ["passed", "failed", "skipped"]},
+        "message": {"type": "string", "minLength": 1},
+        "evidence": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "browser_hook": {
+      "type": "object",
+      "required": ["id", "description", "viewport", "steps", "assertions", "status"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9._:-]{2,127}$"},
+        "description": {"type": "string", "minLength": 1},
+        "viewport": {
+          "type": "object",
+          "required": ["width", "height"],
+          "properties": {
+            "width": {"type": "integer", "minimum": 240},
+            "height": {"type": "integer", "minimum": 240}
+          },
+          "additionalProperties": false
+        },
+        "steps": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "assertions": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "status": {"enum": ["pending", "passed", "failed"]},
+        "details": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    }
+  }
+}

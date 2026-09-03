@@ -1,0 +1,77 @@
+{
+  "schema_version": "1.0.0",
+  "records": [
+    {
+      "fixture_id": "paper_fixture_01",
+      "metadata": {
+        "title": "AWM: Answerable Working Memory for Long-Document VQA Agents",
+        "authors": [
+          "Dongzhuoran Zhou",
+          "Yuqicheng Zhu",
+          "Yule Liu",
+          "Zhen Yang",
+          "Rui Lu",
+          "Yuxiao Dong",
+          "Jie Tang",
+          "Evgeny Kharlamov"
+        ],
+        "year": 2026,
+        "url": "https://arxiv.org/abs/2608.25618v1",
+        "doi": null,
+        "venue": "EMNLP 2026 Findings"
+      },
+      "verification": {
+        "status": "verified",
+        "checked_fields": ["title", "authors", "year", "url"],
+        "sources": [
+          {
+            "provider": "arXiv API",
+            "record_id": "2608.25618v1",
+            "url": "https://arxiv.org/abs/2608.25618v1"
+          }
+        ],
+        "note": "AMiner free and Pro title searches returned no record; arXiv metadata was used."
+      }
+    },
+    {
+      "fixture_id": "paper_fixture_02",
+      "metadata": {
+        "title": "Attention is All You Need.",
+        "authors": [
+          "Ashish Vaswani",
+          "Noam Shazeer",
+          "Niki Parmar",
+          "Jakob Uszkoreit",
+          "Llion Jones",
+          "Aidan N. Gomez",
+          "Lukasz Kaiser",
+          "Illia Polosukhin"
+        ],
+        "year": 2017,
+        "url": "https://www.aminer.cn/pub/599c7987601a182cd2648373",
+        "doi": "10.65215/2q58a426",
+        "venue": "ADVANCES IN NEURAL INFORMATION PROCESSING SYSTEMS 30 (NIPS 2017)"
+      },
+      "verification": {
+        "status": "verified",
+        "checked_fields": ["title", "authors", "year", "url"],
+        "sources": [
+          {
+            "provider": "AMiner paper_search + paper_detail",
+            "record_id": "599c7987601a182cd2648373",
+            "url": "https://www.aminer.cn/pub/599c7987601a182cd2648373"
+          }
+        ]
+      }
+    }
+  ],
+  "cost": {
+    "currency": "CNY",
+    "total": 0.02,
+    "calls": [
+      {"api": "paper_search", "unit_price": 0.0, "count": 2, "subtotal": 0.0},
+      {"api": "paper_search_pro", "unit_price": 0.01, "count": 1, "subtotal": 0.01},
+      {"api": "paper_detail", "unit_price": 0.01, "count": 1, "subtotal": 0.01}
+    ]
+  }
+}

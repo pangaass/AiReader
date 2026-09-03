@@ -1,0 +1,81 @@
+{% macro source_buttons(ids) -%}
+  {% if ids %}<div class="source-actions" aria-label="论文原文入口">
+    {% for evidence_id in ids %}<button class="source-chip" type="button" data-evidence-id="{{ evidence_id }}">查看原文{% if ids|length > 1 %} {{ loop.index }}{% endif %}</button>{% endfor %}
+  </div>{% endif %}
+{%- endmacro %}
+
+{% macro narrative(item) -%}
+<article class="panel summary-card narrative-card"{% if item.evidence_ids %} data-evidence-id="{{ item.evidence_ids[0] }}" role="button" tabindex="0"{% endif %}>
+  <h3>{{ item.title }}</h3><p>{{ item.body }}</p>
+</article>
+{%- endmacro %}
+
+{% macro narrative_flow(items, kind) -%}
+{% set step_labels = {
+  'research_task':'任务', 'motivation':'动因', 'method_overview':'总览',
+  'method_details':'模块', 'training_inference':'阶段', 'experimental_setup':'实验',
+  'main_results':'发现', 'analysis':'分析', 'conclusion_limitations':'结论',
+  'existing_methods':'背景'
+} %}
+<div class="panel story-flow story-flow-{{ kind }}" data-story-kind="{{ kind }}">
+  {% for item in items %}<article class="story-step"{% if item.evidence_ids %} data-evidence-id="{{ item.evidence_ids[0] }}" role="button" tabindex="0"{% endif %}><div class="story-marker" aria-hidden="true">{{ loop.index }}</div><div class="story-copy"><span>{{ step_labels.get(kind, '要点') }} {{ '%02d'|format(loop.index) }}</span><h3>{{ item.title }}</h3><p>{{ item.body }}</p></div></article>{% endfor %}
+</div>
+{%- endmacro %}
+
+{% macro quick_read(items) -%}
+<div class="panel quick-read-grid">
+  {% for item in items %}<article class="quick-read-cell"{% if item.evidence_ids %} data-evidence-id="{{ item.evidence_ids[0] }}" role="button" tabindex="0"{% endif %}><span>0{{ loop.index }}</span><h3>{{ item.title }}</h3><p>{{ item.body }}</p></article>{% endfor %}
+</div>
+{%- endmacro %}
+
+{% macro formula(item) -%}
+<article class="panel formula-card">
+  <div class="component-head"><div><span class="component-label">论文公式{% if item.label %} · {{ item.label }}{% endif %}</span><h3>{{ item.title }}</h3></div>{% if item.href %}<a class="page-link" href="{{ item.href }}" target="_blank" rel="noopener noreferrer">p.{{ item.page }} ↗</a>{% elif item.page %}<span class="page-text">p.{{ item.page }}</span>{% endif %}</div>
+  <div class="formula-scroll" tabindex="0" aria-label="可横向滚动的公式">
+    {{ item.mathml|safe }}
+  </div>
+  {% if item.render_note %}<p class="render-note" role="status">{{ item.render_note }}</p>{% endif %}
+</article>
+{%- endmacro %}
+
+{% macro figure(item) -%}
+<figure class="panel paper-figure">
+  <div class="component-head"><span class="component-label original-label">{{ item.label }}</span>{% if item.href %}<a class="page-link" href="{{ item.href }}" target="_blank" rel="noopener noreferrer">p.{{ item.page }} ↗</a>{% elif item.page %}<span class="page-text">p.{{ item.page }}</span>{% endif %}</div>
+  {% if item.asset_data_uri %}<button class="image-open" type="button" data-image-alt="{{ item.alt }}" data-image-title="{{ item.title }}" data-image-caption="{{ item.caption or '' }}" data-image-href="{{ item.href or '' }}" data-image-page="{{ item.page or '' }}" aria-label="放大查看 {{ item.title }}"><img src="{{ item.asset_data_uri }}" alt="{{ item.alt }}"></button>{% else %}<div class="asset-missing" role="status">原图资源未写入，等待人工审核。</div>{% endif %}
+  {% if item.caption %}<figcaption><b>{{ item.title }}</b><span>{{ item.caption }}</span></figcaption>{% endif %}
+</figure>
+{%- endmacro %}
+
+{% macro table(item) -%}
+<figure class="panel paper-table">
+  <div class="component-head"><span class="component-label original-label">论文原表</span>{% if item.href %}<a class="page-link" href="{{ item.href }}" target="_blank" rel="noopener noreferrer">p.{{ item.page }} ↗</a>{% elif item.page %}<span class="page-text">p.{{ item.page }}</span>{% endif %}</div>
+  {% if item.columns and item.rows %}<div class="scroll-region" tabindex="0" aria-label="论文表格，可横向滚动"><table><thead><tr>{% for column in item.columns %}<th scope="col">{{ column }}</th>{% endfor %}</tr></thead><tbody>{% for row in item.rows %}{% set row_index = loop.index0 %}<tr>{% for cell in row %}{% set key = row_index|string ~ ':' ~ loop.index0|string %}<td>{% if key in item.interactive_cells %}<button class="cell-evidence" type="button" data-evidence-id="{{ item.interactive_cells[key] }}" aria-label="查看该数据点的论文原文">{{ cell }}</button>{% else %}{{ cell }}{% endif %}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div>{% elif item.asset_data_uri %}<button class="image-open" type="button" data-image-alt="{{ item.alt }}" data-image-title="{{ item.title }}" data-image-caption="{{ item.caption or '' }}" data-image-href="{{ item.href or '' }}" data-image-page="{{ item.page or '' }}" aria-label="放大查看论文原表"><img src="{{ item.asset_data_uri }}" alt="{{ item.alt }}"></button>{% else %}<div class="asset-missing" role="status">表格内容未可靠抽取，等待人工审核。</div>{% endif %}
+  {% if item.caption %}<figcaption>{{ item.caption }}</figcaption>{% endif %}
+</figure>
+{%- endmacro %}
+
+{% macro derived_visual(item) -%}
+<figure class="panel derived-visual">
+  <div class="component-head"><div><span class="component-label derived-label">{{ item.label }}</span><h3>{{ item.title }}</h3></div></div>
+  <div class="scroll-region visual-scroll" tabindex="0" aria-label="{{ item.title }}，可横向滚动"><svg viewBox="{{ item.view_box|join(' ') }}" role="img" aria-labelledby="{{ item.id }}-title {{ item.id }}-desc"><title id="{{ item.id }}-title">{{ item.title }}</title><desc id="{{ item.id }}-desc">{{ item.description }}</desc><defs><marker id="arrow-{{ item.id }}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8Z"></path></marker></defs>
+    {% for edge in item.edges %}<line class="graph-edge {{ edge.line }}" x1="{{ edge.x1 }}" y1="{{ edge.y1 }}" x2="{{ edge.x2 }}" y2="{{ edge.y2 }}"{% if edge.marker == 'arrow' %} marker-end="url(#arrow-{{ item.id }})"{% endif %}></line>{% endfor %}
+    {% for node in item.nodes %}<g class="graph-node{% if node.evidence_id %} interactive{% endif %}" transform="translate({{ node.position.x }} {{ node.position.y }})"{% if node.evidence_id %} role="button" tabindex="0" data-evidence-id="{{ node.evidence_id }}" aria-label="查看 {{ node.label }} 的论文原文"{% endif %}><rect width="{{ node.size.width }}" height="{{ node.size.height }}" rx="{% if node.shape == 'rounded_rect' %}16{% else %}5{% endif %}"></rect><text x="{{ node.size.width / 2 }}" y="{{ node.size.height / 2 }}">{{ node.label|truncate(54, true, '…') }}</text></g>{% endfor %}
+    {% for mark in item.marks %}<g class="graph-mark{% if mark.evidence_id %} interactive{% endif %}"{% if mark.evidence_id %} role="button" tabindex="0" data-evidence-id="{{ mark.evidence_id }}" aria-label="查看 {{ mark.label }} 的论文原文"{% endif %}><rect x="{{ mark.position.x }}" y="{{ mark.position.y }}" width="{{ mark.size.width }}" height="{{ mark.size.height }}" rx="4"></rect><text x="{{ mark.position.x + mark.size.width / 2 }}" y="{{ mark.position.y - 10 }}">{{ mark.label|truncate(26, true, '…') }}</text><text x="{{ mark.position.x + mark.size.width / 2 }}" y="{{ mark.position.y + mark.size.height + 24 }}">{{ mark.value }}</text></g>{% endfor %}
+  </svg></div><figcaption><b>派生图。</b> {{ item.description }}</figcaption>
+</figure>
+{%- endmacro %}
+
+{% macro citation(item) -%}
+<article class="panel citation-card"><span class="verification">{{ item.verification }}</span><h3>{{ item.title }}</h3>{% if item.authors %}<p>{{ item.authors|join('、') }}{% if item.year %} · {{ item.year }}{% endif %}</p>{% endif %}<div class="citation-actions">{{ source_buttons(item.evidence_ids) }}{% if item.url %}<a href="{{ item.url }}" target="_blank" rel="noopener noreferrer">论文入口 ↗</a>{% endif %}</div></article>
+{%- endmacro %}
+
+{% macro related_work(item) -%}
+<div class="related-stack">
+  <figure class="panel related-map"><div class="component-head"><div><span class="component-label derived-label">研究溯源</span><h3>前序工作如何汇入本文</h3></div></div>{% if item.relation_groups %}<div class="relation-groups">{% for group in item.relation_groups %}{% if group.nodes %}<div class="relation-group relation-{{ group.kind }}" aria-labelledby="{{ group.id }}-title"><div class="relation-heading"><span aria-hidden="true">{{ loop.index }}</span><div><h4 id="{{ group.id }}-title">{{ group.label }}</h4><p>{{ group.description }}</p></div><b>{{ group.nodes|length }}</b></div><div class="relation-papers">{% for node in group.nodes[:4] %}<article class="relation-paper"{% if node.evidence_id %} data-evidence-id="{{ node.evidence_id }}" role="button" tabindex="0"{% endif %}><div><span>{{ node.year or '年份待核验' }} · 影响{{ node.impact_label }}</span><strong>{{ node.title }}</strong>{% if node.evidence_excerpt %}<p>{{ node.evidence_excerpt }}</p>{% endif %}</div>{% if node.url %}<a href="{{ node.url }}" target="_blank" rel="noopener noreferrer" aria-label="打开 {{ node.title }}">↗</a>{% endif %}</article>{% endfor %}{% if group.nodes|length > 4 %}<div class="relation-more">其余 {{ group.nodes|length - 4 }} 篇见下方对照表</div>{% endif %}</div></div>{% endif %}{% endfor %}</div><div class="relation-merge" aria-hidden="true"><span></span><b>汇入本文</b></div>{% else %}<div class="related-empty">当前论文确实包含 Related Work，但尚未抽取出可安全对应到具体论文的条目。</div>{% endif %}<div class="related-current"><div><b>当前论文</b><span>{{ item.current.title }}</span></div>{% if item.current.year %}<time>{{ item.current.year }}</time>{% endif %}<div class="current-focus"><span>研究问题</span><span>提出方法</span><span>设计实验</span></div></div><figcaption>分支依据来自引言与 Related Work 中的明确引用语境；点击论文条目即可定位到当前论文如何讨论它。</figcaption></figure>
+  {% if item.nodes %}<details class="panel relation-table"><summary>查看全部相关论文对照（{{ item.nodes|length }}）</summary><div role="table" aria-label="相关工作与本文关系对照"><div class="relation-row relation-table-head" role="row"><span role="columnheader">相关论文</span><span role="columnheader">关系</span><span role="columnheader">影响本文</span></div>{% for node in item.nodes %}<div class="relation-row" role="row"{% if node.evidence_id %} data-evidence-id="{{ node.evidence_id }}" tabindex="0"{% endif %}><span role="cell"><b>{{ node.title }}</b>{% if node.year %}<small>{{ node.year }}</small>{% endif %}</span><span role="cell">{{ node.relation_label }}</span><span role="cell">{{ node.impact_label }}</span></div>{% endfor %}</div></details>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro component(item) -%}
+  {% if item.component == 'narrative' %}{{ narrative(item) }}{% elif item.component == 'formula' %}{{ formula(item) }}{% elif item.component == 'figure' %}{{ figure(item) }}{% elif item.component == 'table' %}{{ table(item) }}{% elif item.component == 'derived_visual' %}{{ derived_visual(item) }}{% elif item.component == 'citation' %}{{ citation(item) }}{% elif item.component == 'related_work' %}{{ related_work(item) }}{% endif %}
+{%- endmacro %}
