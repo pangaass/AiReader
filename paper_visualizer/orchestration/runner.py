@@ -35,16 +35,23 @@ class FunctionWorker:
 
 
 class FunctionVerifier:
-    def __init__(self, name: str, kind: str, validator: Callable[[object], list[str]] | None = None) -> None:
+    def __init__(
+        self,
+        name: str,
+        kind: str,
+        validator: Callable[[object], list[str]] | None = None,
+        schema_version: str = "1.0.0",
+    ) -> None:
         self.name = name
         self.kind = kind
         self.validator = validator
+        self.schema_version = schema_version
 
     def review(self, task: TaskEnvelope, value: object) -> dict[str, dict[str, Any]]:
         valid = isinstance(value, Mapping) if self.kind == "json" else isinstance(value, str)
         if not valid:
             raise FatalStageError(f"{task.module} worker returned an invalid {self.kind} artifact")
-        if self.kind == "json" and isinstance(value, Mapping) and value.get("schema_version") != "1.0.0":
+        if self.kind == "json" and isinstance(value, Mapping) and value.get("schema_version") != self.schema_version:
             raise FatalStageError(f"{task.module} worker returned an unsupported schema_version")
         errors = self.validator(value) if self.validator else []
         if errors:
@@ -299,7 +306,7 @@ class StageRunner:
                 name=stage,
                 role=role,
                 worker=FunctionWorker(f"{stage}-worker", producer),
-                verifier=FunctionVerifier(reviewed_by, kind, validator),
+                verifier=FunctionVerifier(reviewed_by, kind, validator, schema_version),
                 backend=self.backend,
                 writer=(lambda value: atomic_write_json(output_path, value)) if kind == "json" else (lambda value: _atomic_write_text(output_path, str(value))),
                 output_path=output_path,

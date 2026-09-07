@@ -5,19 +5,22 @@
   "type": "object",
   "required": ["schema_version", "stage_version", "paper_id", "source_ir_sha256", "policy", "current_paper", "nodes", "clusters", "edges", "review"],
   "properties": {
-    "schema_version": {"const": "1.0.0"},
+    "schema_version": {"const": "2.0.0"},
     "stage_version": {"type": "string", "minLength": 1},
     "paper_id": {"$ref": "#/$defs/id"},
     "source_ir_sha256": {"$ref": "#/$defs/sha256"},
     "policy": {
       "type": "object",
-      "required": ["description_source", "external_data_scope", "edge_meaning", "node_size_meaning", "category_quota"],
+      "required": ["description_source", "external_data_scope", "edge_meaning", "node_size_meaning", "category_quota", "graph_purpose", "edge_direction", "layout_direction"],
       "properties": {
         "description_source": {"const": "current_paper_verbatim_evidence_only"},
         "external_data_scope": {"const": "metadata_and_relationship_verification_only"},
         "edge_meaning": {"const": "four_evidence_grounded_relation_families"},
         "node_size_meaning": {"const": "uniform_no_citation_count_encoding"},
-        "category_quota": {"const": "none"}
+        "category_quota": {"const": "none"},
+        "graph_purpose": {"const": "evidence_grounded_research_provenance"},
+        "edge_direction": {"const": "source_to_current_paper"},
+        "layout_direction": {"const": "left_to_right_terminal"}
       },
       "additionalProperties": false
     },

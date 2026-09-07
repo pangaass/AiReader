@@ -16,7 +16,7 @@
         </div>
         <div class="paper-heading"><strong id="paper-title">请选择论文</strong><span id="paper-meta">可视化内容 · 原文坐标对齐</span></div>
         <div class="top-actions">
-          <button id="llm-button" class="ghost-button"><span class="status-dot"></span>本地解析</button>
+          <button id="llm-button" class="ghost-button" aria-label="打开设置"><span class="status-dot"></span>设置</button>
           <button id="folder-button" class="ghost-button">打开文件夹</button>
           <button id="open-button" class="primary-button">＋ 打开 PDF</button>
         </div>
@@ -66,12 +66,25 @@
 
       <dialog id="llm-dialog" class="settings-dialog">
         <form method="dialog">
-          <div class="dialog-title"><div><span class="eyebrow">OPTIONAL</span><h2>LLM 增强分析</h2></div><button value="cancel" class="icon-button">×</button></div>
-          <p>用于增强复杂表格识别。Token 由 Electron 调用系统安全存储加密保存，不写入项目或浏览器存储。</p>
-          <label>Endpoint<input id="api-endpoint" type="url" autocomplete="off" placeholder="https://api.openai.com/v1" /></label>
-          <label>Token<input id="api-key" type="password" autocomplete="off" placeholder="尚未配置" /></label>
-          <label>Model Name<input id="model-name" autocomplete="off" /></label>
-          <div class="dialog-actions"><button value="cancel" class="ghost-button">取消</button><button id="enable-llm" value="default" class="primary-button">启用并重新解析</button></div>
+          <div class="dialog-title"><div><span class="eyebrow">PREFERENCES</span><h2>阅读与构建设置</h2></div><button value="cancel" class="icon-button" aria-label="关闭设置">×</button></div>
+          <section class="settings-group" aria-labelledby="reading-settings-title">
+            <h3 id="reading-settings-title">阅读体验</h3>
+            <div class="settings-grid">
+              <label>外观<select id="theme-setting"><option value="system">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option></select></label>
+              <label>内容密度<select id="density-setting"><option value="comfortable">舒适</option><option value="compact">紧凑</option></select></label>
+              <label>默认 PDF 缩放<select id="pdf-zoom-setting"><option value="1">100%</option><option value="1.1">110%</option><option value="1.2">120%</option><option value="1.3">130%</option><option value="1.5">150%</option></select></label>
+            </div>
+            <label class="check-setting"><input id="sidebar-setting" type="checkbox" />启动时显示论文目录</label>
+            <label class="check-setting"><input id="reopen-setting" type="checkbox" />启动时打开上次阅读的论文</label>
+          </section>
+          <section class="settings-group" aria-labelledby="model-settings-title">
+            <h3 id="model-settings-title">Visualizer 构建模型</h3>
+            <p>Token 由 Electron 调用系统安全存储加密保存，不写入项目或浏览器存储。</p>
+            <label>Endpoint<input id="api-endpoint" type="url" autocomplete="off" placeholder="https://api.openai.com/v1" /></label>
+            <label>Token<input id="api-key" type="password" autocomplete="off" placeholder="尚未配置" /></label>
+            <label>Model Name<input id="model-name" autocomplete="off" /></label>
+          </section>
+          <div class="dialog-actions"><button value="cancel" class="ghost-button">取消</button><button id="enable-llm" value="default" class="primary-button">保存并应用</button></div>
         </form>
       </dialog>
 

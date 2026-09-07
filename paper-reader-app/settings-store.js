@@ -5,6 +5,11 @@ const path = require('node:path');
 const DEFAULTS = {
   endpoint: 'https://api.openai.com/v1',
   model: 'gpt-5.4-mini',
+  theme: 'system',
+  density: 'comfortable',
+  sidebarVisible: true,
+  pdfZoom: 1.2,
+  reopenLast: true,
 };
 
 function settingsPath() {
@@ -28,6 +33,16 @@ function normalizeModel(value) {
   return model;
 }
 
+function normalizeChoice(value, choices, fallback) {
+  return choices.includes(value) ? value : fallback;
+}
+
+function normalizeZoom(value) {
+  const zoom = Number(value);
+  if (!Number.isFinite(zoom)) return DEFAULTS.pdfZoom;
+  return Math.min(1.8, Math.max(0.8, Math.round(zoom * 10) / 10));
+}
+
 async function getSettings() {
   let saved = {};
   try { saved = JSON.parse(await fs.readFile(settingsPath(), 'utf8')); }
@@ -41,6 +56,11 @@ async function getSettings() {
     endpoint: saved.endpoint || process.env.OPENAI_BASE_URL || DEFAULTS.endpoint,
     apiKey: apiKey || process.env.OPENAI_API_KEY || '',
     model: saved.model || process.env.PAPER_READER_LLM_MODEL || DEFAULTS.model,
+    theme: normalizeChoice(saved.theme, ['system', 'light', 'dark'], DEFAULTS.theme),
+    density: normalizeChoice(saved.density, ['comfortable', 'compact'], DEFAULTS.density),
+    sidebarVisible: saved.sidebarVisible !== false,
+    pdfZoom: normalizeZoom(saved.pdfZoom),
+    reopenLast: saved.reopenLast !== false,
   };
 }
 
@@ -48,21 +68,31 @@ async function saveSettings(input) {
   const endpoint = normalizeEndpoint(input?.endpoint);
   const model = normalizeModel(input?.model);
   const apiKey = String(input?.apiKey || '').trim();
-  if (!apiKey) throw new Error('Token 不能为空');
-  if (!safeStorage.isEncryptionAvailable()) throw new Error('系统安全存储当前不可用');
+  let existing = {};
+  try { existing = JSON.parse(await fs.readFile(settingsPath(), 'utf8')); }
+  catch { existing = {}; }
+  if (apiKey && !safeStorage.isEncryptionAvailable()) throw new Error('系统安全存储当前不可用');
+  const encryptedToken = apiKey
+    ? safeStorage.encryptString(apiKey).toString('base64')
+    : existing.encryptedToken;
   const payload = {
     endpoint,
     model,
-    encryptedToken: safeStorage.encryptString(apiKey).toString('base64'),
+    theme: normalizeChoice(input?.theme, ['system', 'light', 'dark'], DEFAULTS.theme),
+    density: normalizeChoice(input?.density, ['comfortable', 'compact'], DEFAULTS.density),
+    sidebarVisible: input?.sidebarVisible !== false,
+    pdfZoom: normalizeZoom(input?.pdfZoom),
+    reopenLast: input?.reopenLast !== false,
     updatedAt: new Date().toISOString(),
   };
+  if (encryptedToken) payload.encryptedToken = encryptedToken;
   const target = settingsPath();
   const temporary = `${target}.tmp`;
   await fs.mkdir(path.dirname(target), { recursive: true });
   await fs.writeFile(temporary, JSON.stringify(payload, null, 2), { encoding: 'utf8', mode: 0o600 });
   await fs.rename(temporary, target);
   await fs.chmod(target, 0o600);
-  return { endpoint, model, hasToken: true };
+  return { ...payload, encryptedToken: undefined, hasToken: Boolean(encryptedToken) };
 }
 
-module.exports = { DEFAULTS, getSettings, normalizeEndpoint, normalizeModel, saveSettings, settingsPath };
+module.exports = { DEFAULTS, getSettings, normalizeChoice, normalizeEndpoint, normalizeModel, normalizeZoom, saveSettings, settingsPath };

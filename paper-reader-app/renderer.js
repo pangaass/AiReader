@@ -9,7 +9,8 @@ const elements = Object.fromEntries([
   'build-title', 'build-stage', 'build-progress-bar', 'build-progress-detail', 'pdf-page-label', 'source-hint',
   'source-kind', 'source-text', 'pdf-scroll', 'pdf-placeholder', 'pdf-pages', 'zoom-out', 'zoom-in',
   'zoom-label', 'loading', 'loading-text', 'open-button', 'folder-button', 'sidebar-toggle', 'llm-button',
-  'llm-dialog', 'api-endpoint', 'api-key', 'model-name', 'enable-llm', 'toast',
+  'llm-dialog', 'api-endpoint', 'api-key', 'model-name', 'theme-setting', 'density-setting',
+  'sidebar-setting', 'pdf-zoom-setting', 'reopen-setting', 'enable-llm', 'toast',
 ].map((id) => [id, document.getElementById(id)]));
 
 const state = {
@@ -17,7 +18,42 @@ const state = {
   visualizerUrl: null, visualizerReady: false, zoom: 1.2, renderGeneration: 0,
   selectedSource: null, sidebarHidden: false, building: false,
   llm: { enabled: false, endpoint: 'https://api.openai.com/v1', apiKey: '', model: 'gpt-5.4-mini' },
+  preferences: { theme: 'system', density: 'comfortable', sidebarVisible: true, pdfZoom: 1.2, reopenLast: true },
 };
+
+function resolvedTheme(theme) {
+  if (theme === 'light' || theme === 'dark') return theme;
+  return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function setSidebarHidden(hidden) {
+  state.sidebarHidden = Boolean(hidden);
+  document.body.classList.toggle('sidebar-hidden', state.sidebarHidden);
+  elements['sidebar-toggle'].setAttribute('aria-pressed', String(state.sidebarHidden));
+  elements['sidebar-toggle'].setAttribute('aria-label', state.sidebarHidden ? '显示论文目录' : '隐藏论文目录');
+}
+
+function applyPreferences(settings) {
+  state.preferences = {
+    theme: settings.theme || 'system', density: settings.density || 'comfortable',
+    sidebarVisible: settings.sidebarVisible !== false, pdfZoom: Number(settings.pdfZoom) || 1.2,
+    reopenLast: settings.reopenLast !== false,
+  };
+  document.body.dataset.theme = resolvedTheme(state.preferences.theme);
+  document.body.dataset.density = state.preferences.density;
+  state.zoom = state.preferences.pdfZoom;
+  setSidebarHidden(!state.preferences.sidebarVisible);
+  elements['zoom-label'].textContent = `${Math.round(state.zoom * 100)}%`;
+}
+
+async function applyVisualizerPreferences() {
+  if (!state.visualizerReady) return;
+  const theme = resolvedTheme(state.preferences.theme);
+  await elements['visualizer-view'].executeJavaScript(`(() => {
+    document.documentElement.dataset.theme = ${JSON.stringify(theme)};
+    document.documentElement.dataset.density = ${JSON.stringify(state.preferences.density)};
+  })()`);
+}
 
 function showToast(message) {
   elements.toast.textContent = message;
@@ -288,9 +324,8 @@ async function loadPaper(filePath) {
     elements['paper-title'].textContent = state.analysis.title || filePath.split('/').pop();
     const evidenceCount = Object.keys(state.sourceMap).length;
     elements['paper-meta'].textContent = `${state.analysis.page_count} 页 · ${visibleBlockCount(state.analysis.blocks)} 个原文块 · ${evidenceCount} 条精确证据定位`;
-    const llmApplied = ['applied', 'partial'].includes(state.analysis.llm?.status);
-    elements['llm-button'].querySelector('.status-dot').classList.toggle('active', llmApplied);
-    elements['llm-button'].lastChild.textContent = state.analysis.llm?.status === 'partial' ? '部分增强' : (llmApplied ? '表格已增强' : (state.llm.apiKey ? '模型已配置' : '本地解析'));
+    elements['llm-button'].querySelector('.status-dot').classList.toggle('active', Boolean(state.llm.apiKey));
+    elements['llm-button'].lastChild.textContent = state.llm.apiKey ? '设置 · 模型已配置' : '设置';
     renderLibrary();
     renderOutline();
     loadVisualizer(payload.visualizerUrl);
@@ -325,12 +360,7 @@ async function chooseFolder() {
   else showToast('所选文件夹中没有找到 PDF');
 }
 
-function toggleSidebar() {
-  state.sidebarHidden = !state.sidebarHidden;
-  document.body.classList.toggle('sidebar-hidden', state.sidebarHidden);
-  elements['sidebar-toggle'].setAttribute('aria-pressed', String(state.sidebarHidden));
-  elements['sidebar-toggle'].setAttribute('aria-label', state.sidebarHidden ? '显示论文目录' : '隐藏论文目录');
-}
+function toggleSidebar() { setSidebarHidden(!state.sidebarHidden); }
 
 function bindEvents() {
   const webviewPreload = new URL('./visualizer-preload.js', window.location.href).href;
@@ -341,6 +371,7 @@ function bindEvents() {
       state.visualizerReady = true;
       const count = event.args[0]?.evidenceCount || 0;
       elements['visualizer-status'].textContent = `${count} 条可定位证据`;
+      applyVisualizerPreferences().catch(() => {});
       notifyIntegrationReady();
     }
   });
@@ -367,19 +398,26 @@ function bindEvents() {
   elements['enable-llm'].addEventListener('click', async (event) => {
     event.preventDefault();
     const apiKey = elements['api-key'].value.trim() || state.llm.apiKey;
-    if (!apiKey) { showToast('请输入 API Key'); return; }
     const settings = {
       endpoint: elements['api-endpoint'].value.trim(),
       apiKey,
       model: elements['model-name'].value.trim(),
+      theme: elements['theme-setting'].value,
+      density: elements['density-setting'].value,
+      sidebarVisible: elements['sidebar-setting'].checked,
+      pdfZoom: Number(elements['pdf-zoom-setting'].value),
+      reopenLast: elements['reopen-setting'].checked,
     };
     try {
       await window.paperReader.saveSettings(settings);
       state.llm = { enabled: true, ...settings };
+      applyPreferences(settings);
+      await applyVisualizerPreferences();
+      if (state.pdf) await renderPdf();
       elements['api-key'].value = '';
       elements['api-key'].placeholder = '已安全保存';
       elements['llm-dialog'].close();
-      if (state.currentPath) await loadPaper(state.currentPath);
+      showToast('设置已保存');
     } catch (error) {
       showToast(`无法保存配置：${error.message}`);
     }
@@ -390,15 +428,28 @@ async function init() {
   bindEvents();
   const settings = await window.paperReader.getSettings();
   state.llm = { enabled: false, ...settings };
+  applyPreferences(settings);
   elements['api-endpoint'].value = settings.endpoint;
   elements['model-name'].value = settings.model;
+  elements['theme-setting'].value = settings.theme;
+  elements['density-setting'].value = settings.density;
+  elements['sidebar-setting'].checked = settings.sidebarVisible;
+  elements['pdf-zoom-setting'].value = String(settings.pdfZoom);
+  elements['reopen-setting'].checked = settings.reopenLast;
   elements['api-key'].placeholder = settings.apiKey ? '已安全保存' : '尚未配置';
   const samples = await window.paperReader.getSamples();
   const preferredPath = samples.find((paper) => paper.preferred)?.path;
-  state.library = normalizeLibrary(samples, recentPaths());
+  const recent = recentPaths();
+  state.library = normalizeLibrary(samples, recent);
   renderLibrary();
-  if (state.library.length) await loadPaper(preferredPath || state.library[0].path);
+  if (state.library.length) await loadPaper((settings.reopenLast && recent[0]) || preferredPath || state.library[0].path);
 }
+
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (state.preferences.theme !== 'system') return;
+  document.body.dataset.theme = resolvedTheme('system');
+  applyVisualizerPreferences().catch(() => {});
+});
 
 window.__paperReaderTest = {
   async selectFirstVisualizerEvidence() {

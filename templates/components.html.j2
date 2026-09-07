@@ -22,6 +22,71 @@
 </div>
 {%- endmacro %}
 
+{% macro task_canvas(items) -%}
+<div class="panel task-canvas">
+  <div class="task-spine" aria-hidden="true"><span>研究对象</span><i>→</i><span>研究目标</span><i>→</i><span>验证问题</span></div>
+  <div class="task-points">{% for item in items %}<article class="task-point"{% if item.evidence_ids %} data-evidence-id="{{ item.evidence_ids[0] }}" role="button" tabindex="0"{% endif %}><b>{{ '%02d'|format(loop.index) }}</b><div><h3>{{ item.title }}</h3><p>{{ item.body }}</p></div></article>{% endfor %}</div>
+</div>
+{%- endmacro %}
+
+{% macro argument_chain(items) -%}
+<div class="panel argument-chain">
+  {% for item in items %}<article class="argument-node"{% if item.evidence_ids %} data-evidence-id="{{ item.evidence_ids[0] }}" role="button" tabindex="0"{% endif %}><span>{{ ['观察','缺口','设计要求','核心主张'][loop.index0] if loop.index0 < 4 else '推论' }}</span><h3>{{ item.title }}</h3><p>{{ item.body }}</p></article>{% if not loop.last %}<i aria-hidden="true">→</i>{% endif %}{% endfor %}
+</div>
+{%- endmacro %}
+
+{% macro method_map(items) -%}
+<div class="panel method-map" data-method-flow>
+  <div class="method-map-note"><b>方法流</b><span>点击阶段定位正文；下方论文原方法图会同步突出。</span></div>
+  <div class="method-stages">{% for item in items %}<article class="method-stage" data-method-step="{{ loop.index0 }}"{% if item.evidence_ids %} data-evidence-id="{{ item.evidence_ids[0] }}" role="button" tabindex="0"{% endif %}><span>{{ '%02d'|format(loop.index) }}</span><h3>{{ item.title }}</h3><p>{{ item.body }}</p></article>{% endfor %}</div>
+</div>
+{%- endmacro %}
+
+{% macro execution_track(items) -%}
+<div class="panel execution-track">
+  <div class="track-label"><b>论文流程</b><span>从数据准备到执行输出</span></div>
+  <div class="track-rail">{% for item in items %}<article{% if item.evidence_ids %} data-evidence-id="{{ item.evidence_ids[0] }}" role="button" tabindex="0"{% endif %}><span>阶段 {{ loop.index }}</span><h3>{{ item.title }}</h3><p>{{ item.body }}</p></article>{% endfor %}</div>
+</div>
+{%- endmacro %}
+
+{% macro experiment_blueprint(items) -%}
+<div class="panel experiment-blueprint">
+  <div class="blueprint-legend"><span>对象 / 数据</span><span>对照 / 设置</span><span>指标 / 观察</span></div>
+  {% for item in items %}<article{% if item.evidence_ids %} data-evidence-id="{{ item.evidence_ids[0] }}" role="button" tabindex="0"{% endif %}><b>实验 {{ '%02d'|format(loop.index) }}</b><div><h3>{{ item.title }}</h3><p>{{ item.body }}</p></div></article>{% endfor %}
+</div>
+{%- endmacro %}
+
+{% macro result_ledger(items) -%}
+<div class="panel result-ledger">
+  {% for item in items %}<article{% if item.evidence_ids %} data-evidence-id="{{ item.evidence_ids[0] }}" role="button" tabindex="0"{% endif %}><span>R{{ loop.index }}</span><div><h3>{{ item.title }}</h3><p>{{ item.body }}</p></div><b>证据 ↗</b></article>{% endfor %}
+</div>
+{%- endmacro %}
+
+{% macro diagnostic_matrix(items) -%}
+<div class="panel diagnostic-matrix">
+  {% for item in items %}<article{% if item.evidence_ids %} data-evidence-id="{{ item.evidence_ids[0] }}" role="button" tabindex="0"{% endif %}><span>{{ ['机制','效率','鲁棒性','失败模式'][loop.index0] if loop.index0 < 4 else '补充' }}</span><h3>{{ item.title }}</h3><p>{{ item.body }}</p></article>{% endfor %}
+</div>
+{%- endmacro %}
+
+{% macro boundary_map(items) -%}
+<div class="panel boundary-map">
+  <div class="boundary-axis" aria-hidden="true"><span>论文可以支持</span><span>仍需谨慎</span></div>
+  {% for item in items %}<article class="boundary-item boundary-{{ 'claim' if loop.index0 == 0 else 'limit' }}"{% if item.evidence_ids %} data-evidence-id="{{ item.evidence_ids[0] }}" role="button" tabindex="0"{% endif %}><span>{{ '结论' if loop.index0 == 0 else '边界 ' ~ loop.index }}</span><h3>{{ item.title }}</h3><p>{{ item.body }}</p></article>{% endfor %}
+</div>
+{%- endmacro %}
+
+{% macro narrative_group(items, kind, presentation) -%}
+  {% if presentation == 'task_canvas' %}{{ task_canvas(items) }}
+  {% elif presentation == 'argument_chain' %}{{ argument_chain(items) }}
+  {% elif presentation == 'method_map' %}{{ method_map(items) }}
+  {% elif presentation == 'execution_track' %}{{ execution_track(items) }}
+  {% elif presentation == 'experiment_blueprint' %}{{ experiment_blueprint(items) }}
+  {% elif presentation == 'result_ledger' %}{{ result_ledger(items) }}
+  {% elif presentation == 'diagnostic_matrix' %}{{ diagnostic_matrix(items) }}
+  {% elif presentation == 'boundary_map' %}{{ boundary_map(items) }}
+  {% else %}{{ narrative_flow(items, kind) }}{% endif %}
+{%- endmacro %}
+
 {% macro quick_read(items) -%}
 <div class="panel quick-read-grid">
   {% for item in items %}<article class="quick-read-cell"{% if item.evidence_ids %} data-evidence-id="{{ item.evidence_ids[0] }}" role="button" tabindex="0"{% endif %}><span>0{{ loop.index }}</span><h3>{{ item.title }}</h3><p>{{ item.body }}</p></article>{% endfor %}
@@ -71,8 +136,22 @@
 
 {% macro related_work(item) -%}
 <div class="related-stack">
-  <figure class="panel related-map"><div class="component-head"><div><span class="component-label derived-label">研究溯源</span><h3>前序工作如何汇入本文</h3></div></div>{% if item.relation_groups %}<div class="relation-groups">{% for group in item.relation_groups %}{% if group.nodes %}<div class="relation-group relation-{{ group.kind }}" aria-labelledby="{{ group.id }}-title"><div class="relation-heading"><span aria-hidden="true">{{ loop.index }}</span><div><h4 id="{{ group.id }}-title">{{ group.label }}</h4><p>{{ group.description }}</p></div><b>{{ group.nodes|length }}</b></div><div class="relation-papers">{% for node in group.nodes[:4] %}<article class="relation-paper"{% if node.evidence_id %} data-evidence-id="{{ node.evidence_id }}" role="button" tabindex="0"{% endif %}><div><span>{{ node.year or '年份待核验' }} · 影响{{ node.impact_label }}</span><strong>{{ node.title }}</strong>{% if node.evidence_excerpt %}<p>{{ node.evidence_excerpt }}</p>{% endif %}</div>{% if node.url %}<a href="{{ node.url }}" target="_blank" rel="noopener noreferrer" aria-label="打开 {{ node.title }}">↗</a>{% endif %}</article>{% endfor %}{% if group.nodes|length > 4 %}<div class="relation-more">其余 {{ group.nodes|length - 4 }} 篇见下方对照表</div>{% endif %}</div></div>{% endif %}{% endfor %}</div><div class="relation-merge" aria-hidden="true"><span></span><b>汇入本文</b></div>{% else %}<div class="related-empty">当前论文确实包含 Related Work，但尚未抽取出可安全对应到具体论文的条目。</div>{% endif %}<div class="related-current"><div><b>当前论文</b><span>{{ item.current.title }}</span></div>{% if item.current.year %}<time>{{ item.current.year }}</time>{% endif %}<div class="current-focus"><span>研究问题</span><span>提出方法</span><span>设计实验</span></div></div><figcaption>分支依据来自引言与 Related Work 中的明确引用语境；点击论文条目即可定位到当前论文如何讨论它。</figcaption></figure>
-  {% if item.nodes %}<details class="panel relation-table"><summary>查看全部相关论文对照（{{ item.nodes|length }}）</summary><div role="table" aria-label="相关工作与本文关系对照"><div class="relation-row relation-table-head" role="row"><span role="columnheader">相关论文</span><span role="columnheader">关系</span><span role="columnheader">影响本文</span></div>{% for node in item.nodes %}<div class="relation-row" role="row"{% if node.evidence_id %} data-evidence-id="{{ node.evidence_id }}" tabindex="0"{% endif %}><span role="cell"><b>{{ node.title }}</b>{% if node.year %}<small>{{ node.year }}</small>{% endif %}</span><span role="cell">{{ node.relation_label }}</span><span role="cell">{{ node.impact_label }}</span></div>{% endfor %}</div></details>{% endif %}
+  <figure class="panel provenance-graph" data-provenance-graph>
+    <div class="component-head"><div><span class="component-label derived-label">研究溯源</span><h3>哪些工作汇聚成了本文</h3><p>从左向右阅读：论文来源 → 影响类型 → 当前论文。</p></div><div class="provenance-zoom" aria-label="图谱缩放"><button type="button" data-graph-action="out" aria-label="缩小">−</button><button type="button" data-graph-action="reset">复位</button><button type="button" data-graph-action="in" aria-label="放大">＋</button></div></div>
+    {% if item.relation_groups %}<div class="provenance-filters" role="group" aria-label="按来源类型筛选"><button type="button" class="active" data-provenance-filter="all" aria-pressed="true">全部 {{ item.nodes|length }}</button>{% for group in item.relation_groups %}<button type="button" data-provenance-filter="{{ group.kind }}" aria-pressed="false"><i class="relation-dot relation-{{ group.kind }}"></i>{{ group.label }} {{ group.nodes|length }}</button>{% endfor %}</div>
+    <div class="provenance-viewport" tabindex="0" aria-label="论文研究溯源网络，可拖动画布、滚轮缩放、拖动论文节点">
+      <div class="provenance-world" style="width:{{ item.canvas.width }}px;height:{{ item.canvas.height }}px">
+        <svg class="provenance-edges" width="{{ item.canvas.width }}" height="{{ item.canvas.height }}" viewBox="0 0 {{ item.canvas.width }} {{ item.canvas.height }}" aria-hidden="true"><defs><marker id="provenance-arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9Z"></path></marker></defs>{% for edge in item.graph_edges %}<path class="provenance-edge relation-{{ edge.kind }}{% if not edge.semantic %} provenance-trunk{% endif %}" data-source-node="{{ edge.source_id }}" data-target-node="{{ edge.target_id }}" data-kind="{{ edge.kind }}" marker-end="url(#provenance-arrow)"></path>{% endfor %}</svg>
+        {% for group in item.relation_groups %}<div class="provenance-lane relation-{{ group.kind }}" data-kind="{{ group.kind }}" style="top:{{ group.position.y }}px;height:{{ group.position.height }}px"><span>{{ group.label }}</span></div>{% endfor %}
+        {% for node in item.nodes %}<button type="button" class="provenance-node relation-{{ node.relation_kind }}" data-node-id="{{ node.id }}" data-kind="{{ node.relation_kind }}" data-provenance-evidence="{{ node.evidence_id or '' }}" data-title="{{ node.title }}" data-year="{{ node.year or '' }}" data-relation="{{ node.relation_label or '' }}" data-excerpt="{{ node.evidence_excerpt or '' }}" data-url="{{ node.url or '' }}" style="left:{{ node.position.x }}px;top:{{ node.position.y }}px;width:{{ node.size.width }}px;height:{{ node.size.height }}px" aria-label="{{ node.title }}，{{ node.relation_label }}"><small>{{ node.year or '年份待核验' }}</small><strong>{{ node.title }}</strong></button>{% endfor %}
+        {% for hub in item.hubs %}<div class="provenance-hub relation-{{ hub.kind }}" data-node-id="{{ hub.id }}" data-kind="{{ hub.kind }}" style="left:{{ hub.position.x }}px;top:{{ hub.position.y }}px;width:{{ hub.size.width }}px;height:{{ hub.size.height }}px"><span>{{ hub.label }}</span><b>{{ hub.count }}</b></div>{% endfor %}
+        <div class="provenance-terminal" data-node-id="{{ item.current_node.id }}" style="left:{{ item.current_node.position.x }}px;top:{{ item.current_node.position.y }}px;width:{{ item.current_node.size.width }}px;height:{{ item.current_node.size.height }}px"><small>当前论文 · 最终节点</small><strong>{{ item.current_node.title }}</strong>{% if item.current_node.year %}<time>{{ item.current_node.year }}</time>{% endif %}</div>
+      </div>
+    </div>
+    <aside class="provenance-detail" hidden aria-live="polite"><button type="button" class="provenance-detail-close" aria-label="关闭节点详情">×</button><small data-provenance-meta></small><h4 data-provenance-title></h4><p data-provenance-relation></p><blockquote data-provenance-excerpt></blockquote><div><button type="button" class="text-button" data-provenance-open-evidence>定位本文引用语境</button><a data-provenance-link target="_blank" rel="noopener noreferrer">打开论文 ↗</a></div></aside>
+    {% else %}<div class="related-empty">当前论文确实包含 Related Work，但尚未抽取出可安全对应到具体论文的条目。</div>{% endif %}
+    <figcaption><b>证据约束图。</b> 每条语义边都来自本文中同时包含引用标记和关系表达的连续原文；节点大小不表示引用量。</figcaption>
+  </figure>
 </div>
 {%- endmacro %}
 

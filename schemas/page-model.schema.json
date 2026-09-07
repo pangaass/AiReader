@@ -47,11 +47,12 @@
       "properties": {"id": {"type": "string"}, "label": {"type": "string"}}, "additionalProperties": false
     },
     "section": {
-      "type": "object", "required": ["id", "kind", "number", "title", "intro", "status", "fallback_reason", "components"],
+      "type": "object", "required": ["id", "kind", "number", "title", "intro", "status", "presentation", "fallback_reason", "components"],
       "properties": {
         "id": {"type": "string"}, "kind": {"type": "string"}, "number": {"type": "string"},
         "title": {"type": "string"}, "intro": {"type": "string"},
         "status": {"enum": ["complete", "fallback", "unavailable"]},
+        "presentation": {"enum": ["briefing_grid", "task_canvas", "provenance_graph", "argument_chain", "method_map", "process_flow", "execution_track", "experiment_blueprint", "result_ledger", "diagnostic_matrix", "boundary_map"]},
         "fallback_reason": {"type": ["string", "null"]},
         "components": {"type": "array", "items": {"type": "object"}}
       },

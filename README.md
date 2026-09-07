@@ -31,7 +31,7 @@ npm start
 
 打开尚未生成页面的 PDF 后，可以直接点击中栏“构建 Visualizer”，启动完整 Agent 流水线并查看阶段进度；完成后页面会自动载入，无需再运行终端命令。
 
-本地解析无需网络；右上角可选启用 LLM 分类增强，API Key 只用于当次解析。
+本地解析无需网络；右上角“设置”可调整主题、密度、默认侧栏、PDF 缩放和恢复上次论文，也可配置 Harness 使用的 Endpoint、Token 与模型。Token 只保存在系统安全存储中。
 
 发布前建议启用完整门禁：
 
@@ -46,7 +46,7 @@ npm start
 
 ## 架构与数据
 
-- 流水线：`parse → model → content → visual → related → page → render → review`。
+- 流水线：`parse → model → content → visual → related → page → render → review`；`related` 阶段会生成有向研究溯源图。
 - 每阶段通过统一 `TaskEnvelope` / `TaskResult` 协议执行 Lead → Worker → Verifier，并支持内容哈希缓存、有限重试、失败 attempt 保存与人工审核 overlay。
 - 默认 backend 是可复现的进程内 worker/verifier；`SubprocessExecutionBackend` 提供 JSON-over-stdio 的独立进程或外部 agent 接口，并要求 verifier 返回身份与检查证据。这里的“进程内 agent”是职责隔离，不宣称独立 LLM 会话。
 - 统一 Schema 位于 `schemas/`；实现位于 `paper_visualizer/`；通用模板位于 `templates/`。
@@ -60,6 +60,11 @@ npm start
 - [Agent 协议](docs/AGENT_PROTOCOL.md)
 - [实施计划](docs/IMPLEMENTATION_PLAN.md)
 - [产品要求](docs/PRODUCT_REQUIREMENTS_V1.md)
+- [论文研究溯源图设计](docs/PROVENANCE_GRAPH_DESIGN.md)
+- [栏目感知交互与文献任务调研](docs/SECTION_AWARE_INTERACTION_RESEARCH.md)
+- [海报与 PPT Benchmark、可行性和设计建议](docs/POSTER_PPT_REFERENCE_AND_BENCHMARK.md)
+- [当前研究目标与数据处理流程](docs/CURRENT_RESEARCH_GOAL_AND_DATA_PIPELINE.md)
+- [当前状态与新窗口交接](docs/CURRENT_STATUS_2026-09-04.md)
 
 ## 验证与示例
 
@@ -67,7 +72,7 @@ npm start
 .venv/bin/pytest
 ```
 
-当前 113 项自动化测试通过；两篇异构论文均通过静态、真实浏览器和独立 agent 终验，每篇 20 项检查全部通过，最终为 0 blocker、0 warning。公式使用结构化 MathML，变量上下标可独立交互；Related Work 直接按有原文依据的关系组织，不生成单独的证据地图。正式流水线复跑时，两篇论文的 8 个阶段均命中缓存：
+公式使用结构化 MathML，变量上下标可独立交互；Related Work 现在渲染为一张由四类来源汇聚到当前论文终点的交互网络，语义边均可回到当前论文的连续原文。正式流水线复跑时，各阶段支持内容哈希缓存：
 
 - [AWM 生成页](output/awm-generated-visualizer.html)
 - [Attention Is All You Need 生成页](output/attention-is-all-you-need-visualizer.html)

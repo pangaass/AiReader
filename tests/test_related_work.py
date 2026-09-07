@@ -8,6 +8,7 @@ from paper_visualizer.modeling import build_paper_ir
 from paper_visualizer.parsing import ParseOptions, parse_source
 from paper_visualizer.related import build_related_work_plan, validate_related_work_plan, verify_related_work
 from paper_visualizer.related import planner as planner_module
+from paper_visualizer.rendering.page_model import _related_component
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -62,6 +63,8 @@ def test_builds_schema_valid_grounded_graph_and_filters_caption_mentions():
     assert validate_related_work_plan(ir, plan, ROOT) == []
     assert len(plan["edges"]) == 2
     assert all(edge["kind"] == "same_problem" and edge["basis_evidence_ids"] for edge in plan["edges"])
+    assert all(edge["source_id"].startswith("related:") and edge["target_id"] == plan["paper_id"] for edge in plan["edges"])
+    assert plan["policy"]["edge_direction"] == "source_to_current_paper"
     assert plan["policy"]["category_quota"] == "none"
     assert all(not node["raw_reference"].startswith("[3]") for node in plan["nodes"])
     assert all("verbatim_text" not in node["description"] for node in plan["nodes"])
@@ -127,6 +130,33 @@ def test_validator_rejects_edge_kind_not_supported_by_bound_evidence():
     errors = validate_related_work_plan(ir, plan, ROOT)
 
     assert any("not explicitly supported" in error for error in errors)
+
+
+def test_validator_rejects_old_outward_edge_direction():
+    ir = _ir()
+    plan = build_related_work_plan(ir, project_root=ROOT)
+    edge = plan["edges"][0]
+    edge["source_id"], edge["target_id"] = edge["target_id"], edge["source_id"]
+
+    errors = validate_related_work_plan(ir, plan, ROOT)
+
+    assert any("edge endpoint is unknown" in error for error in errors)
+
+
+def test_page_component_builds_left_to_right_terminal_network():
+    ir = _ir()
+    plan = build_related_work_plan(ir, project_root=ROOT)
+    evidence = {item["id"]: item for item in ir["evidence"]}
+
+    component = _related_component(plan, evidence)
+
+    assert component["direction"] == "source_to_current_paper"
+    assert component["hubs"]
+    assert component["current_node"]["position"]["x"] > max(node["position"]["x"] for node in component["nodes"])
+    semantic = [edge for edge in component["graph_edges"] if edge["semantic"]]
+    trunks = [edge for edge in component["graph_edges"] if not edge["semantic"]]
+    assert all(edge["source_id"].startswith("related:") and edge["target_id"].startswith("hub:") for edge in semantic)
+    assert all(edge["source_id"].startswith("hub:") and edge["target_id"] == plan["paper_id"] for edge in trunks)
 
 
 def test_result_table_is_not_misread_as_dataset_or_evaluation_usage():

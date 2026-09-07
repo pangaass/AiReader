@@ -20,6 +20,7 @@ test = ["pytest>=8.0"]
 
 [project.scripts]
 paper-visualizer = "paper_visualizer.cli:main"
+paper-provenance-graph = "paper_visualizer.related.cli:main"
 
 [tool.setuptools]
 packages = ["paper_visualizer", "paper_visualizer.agents", "paper_visualizer.parsing", "paper_visualizer.modeling", "paper_visualizer.planning", "paper_visualizer.visuals", "paper_visualizer.related", "paper_visualizer.rendering", "paper_visualizer.review", "paper_visualizer.orchestration"]

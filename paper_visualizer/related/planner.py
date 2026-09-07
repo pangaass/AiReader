@@ -20,8 +20,8 @@ from ..artifacts import atomic_write_json
 from ..validation import validate_ir
 
 
-SCHEMA_VERSION = "1.0.0"
-STAGE_VERSION = "1.4.0"
+SCHEMA_VERSION = "2.0.0"
+STAGE_VERSION = "2.0.0"
 
 _YEAR_RE = re.compile(r"(?<!\d)((?:19|20)\d{2})(?!\d)")
 _URL_RE = re.compile(r"https?://[^\s)>\]}]+", re.I)
@@ -31,28 +31,28 @@ _LEADING_INDEX_RE = re.compile(r"^\s*(?:\[\d+\]|\d+[.)])\s*")
 
 _RELATIONS: tuple[tuple[str, str, str, re.Pattern[str]], ...] = (
     (
+        "same_problem",
+        "研究问题来源",
+        "这些前作界定了本文继续处理的任务、现象或研究问题。",
+        re.compile(r"\b(?:previous|prior|earlier|existing|recent)(?:\s+[a-z-]+){0,3}\s+(?:work|approach|method|model|system)s?\b|\b(?:one|a|prior|previous) stud(?:y|ies)\b[^.]{0,100}\b(?:found|showed|reported)\b|\bstud(?:y|ies)\b[^.]{0,100}\b(?:found|showed|reported)\b|\b(?:another|an alternative) (?:approach|method)\b|\b(?:numerous|several|many) (?:efforts|approaches|methods|systems)\b|\bstate[- ]of[- ]the[- ]art\b|\b(?:has|have) (?:[a-z]+ )?been (?:proposed|used|applied|studied|developed)\b|\b(?:system|tool|technique|method|approach)s?\b[^.]{0,90}\b(?:introduced|used|provided|supported)\b|\b(?:address|solve|tackle)(?:es|ed|ing)? (?:the |this |a )?(?:same |similar |related )?(?:problem|task|challenge|goal)\b", re.I),
+    ),
+    (
+        "improvement_comparison",
+        "相关工作与差异",
+        "这些替代路线、基线或已知局限解释了本文的设计选择。",
+        re.compile(r"\b(unlike|in contrast|compared? (?:to|with)|comparison|baseline|outperform|surpass|better than|advantages? over|alternative (?:method|approach)|not easy|challenges? of|(?:achieved|obtained|delivered|showed)\s+(?:significant(?:ly)?\s+)?improvements?|limitation|limited by|drawback|shortcoming|whereas|rather than|instead(?: of)?|target(?:s|ed|ing)?[^.]{0,100}\bnot\b)\b|\b(?:we|our|this (?:work|paper|method)|[A-Z][A-Z0-9-]{1,9}\s+(?:keeps|uses|adopts|extends))\b[^.]{0,140}\bbut\b", re.I),
+    ),
+    (
         "foundation_inheritance",
-        "方法继承与改造",
+        "方法来源",
         "这些工作提供了本文采用、扩展或重新组织的方法基础。",
         re.compile(r"\b(?:we|our (?:method|model|approach|system))\s+(?:adopt|employ|follow|extend|adapt|build)|\bwe\s+use\b[^.]{0,100}\b(?:method|model|architecture|algorithm|technique|encoding|embedding|connection|layer|objective|loss|procedure)s?\b|\b(?:was|were|is|are)\s+(?:encoded|implemented|initialized|trained)\s+(?:using|with|by)\b|\b(?:split|encode)d?\s+(?:tokens|sentences|inputs)\b[^.]{0,100}\b(?:using|into|with)\b|\b(?:based|built) (?:on|upon)\b|\binspir(?:ed|ation) (?:by|from)\b|\bextend(?:s|ed|ing)?\b[^.]{0,100}\bprior\b|\b(?:introduced|proposed) by\b|\b(?:as in|as described in|similar to)\b", re.I),
     ),
     (
-        "improvement_comparison",
-        "前作局限与本文差异",
-        "这些路线构成替代方案或暴露缺口，从而解释本文为什么采用不同设计。",
-        re.compile(r"\b(unlike|in contrast|compared? (?:to|with)|comparison|baseline|outperform|surpass|better than|advantages? over|alternative (?:method|approach)|not easy|challenges? of|(?:achieved|obtained|delivered|showed)\s+(?:significant(?:ly)?\s+)?improvements?|limitation|limited by|drawback|shortcoming|whereas|rather than|instead(?: of)?|target(?:s|ed|ing)?[^.]{0,100}\bnot\b)\b|\b(?:we|our|this (?:work|paper|method)|[A-Z][A-Z0-9-]{1,9}\s+(?:keeps|uses|adopts|extends))\b[^.]{0,140}\bbut\b", re.I),
-    ),
-    (
         "data_evaluation",
-        "实验设计来源",
+        "数据与评测来源",
         "这些工作影响本文的数据、指标、基线或评测协议。",
         re.compile(r"\b(?:we|our (?:method|model|approach|system))\s+(?:use|evaluate|train|test|report)[^.]{0,120}\b(?:dataset|corpus|benchmark|metric|evaluation protocol|test set|training data|BLEU|ROUGE|perplexity|accuracy|F1)\b|\b(?:dataset|corpus|benchmark|metric|evaluation protocol|test set|training data)\b[^.]{0,100}\b(?:introduced|proposed|released|from)\b", re.I),
-    ),
-    (
-        "same_problem",
-        "研究问题来源",
-        "这些前作描述了相同问题、阅读行为或需要解决的现象。",
-        re.compile(r"\b(?:previous|prior|earlier|existing|recent)(?:\s+[a-z-]+){0,3}\s+(?:work|approach|method|model|system)s?\b|\b(?:one|a|prior|previous) stud(?:y|ies)\b[^.]{0,100}\b(?:found|showed|reported)\b|\bstud(?:y|ies)\b[^.]{0,100}\b(?:found|showed|reported)\b|\b(?:another|an alternative) (?:approach|method)\b|\b(?:numerous|several|many) (?:efforts|approaches|methods|systems)\b|\bstate[- ]of[- ]the[- ]art\b|\b(?:has|have) (?:[a-z]+ )?been (?:proposed|used|applied|studied|developed)\b|\b(?:system|tool|technique|method|approach)s?\b[^.]{0,90}\b(?:introduced|used|provided|supported)\b|\b(?:address|solve|tackle)(?:es|ed|ing)? (?:the |this |a )?(?:same |similar |related )?(?:problem|task|challenge|goal)\b", re.I),
     ),
 )
 
@@ -302,8 +302,8 @@ def build_related_work_plan(ir: Mapping[str, Any], *, project_root: Path | None 
         edges.append(
             {
                 "id": f"edge:relation:{len(edges) + 1:04d}",
-                "source_id": current_id,
-                "target_id": node_id,
+                "source_id": node_id,
+                "target_id": current_id,
                 "kind": relation_key,
                 "cluster_id": cluster_id,
                 "basis_evidence_ids": relation_evidence_ids,
@@ -338,6 +338,9 @@ def build_related_work_plan(ir: Mapping[str, Any], *, project_root: Path | None 
             "edge_meaning": "four_evidence_grounded_relation_families",
             "node_size_meaning": "uniform_no_citation_count_encoding",
             "category_quota": "none",
+            "graph_purpose": "evidence_grounded_research_provenance",
+            "edge_direction": "source_to_current_paper",
+            "layout_direction": "left_to_right_terminal",
         },
         "current_paper": {"id": current_id, "metadata": current_metadata, "verification": _unverified()},
         "nodes": nodes,
@@ -361,11 +364,11 @@ def validate_related_work_plan(ir: Mapping[str, Any], plan: Mapping[str, Any], p
     node_ids = {item["id"] for item in plan.get("nodes", [])}
     cluster_ids = {item["id"] for item in plan.get("clusters", [])}
     block_roles = {block["id"]: block.get("role") for page in ir.get("pages", []) for block in page.get("blocks", [])}
-    allowed_sources = {plan.get("paper_id")}
+    allowed_targets = {plan.get("paper_id")}
     relation_kinds = {key for key, _, _, _ in _RELATIONS}
-    edges_by_target: dict[str, list[Mapping[str, Any]]] = {}
+    edges_by_source: dict[str, list[Mapping[str, Any]]] = {}
     for edge in plan.get("edges", []):
-        edges_by_target.setdefault(str(edge.get("target_id")), []).append(edge)
+        edges_by_source.setdefault(str(edge.get("source_id")), []).append(edge)
     for node in plan.get("nodes", []):
         citation = citations.get(node.get("citation_id"))
         if citation is None:
@@ -385,7 +388,7 @@ def validate_related_work_plan(ir: Mapping[str, Any], plan: Mapping[str, Any], p
                 relation = _relation_for(context) if context else None
                 if relation:
                     supported_kinds[evidence_id] = relation[0]
-        node_edges = edges_by_target.get(str(node.get("id")), [])
+        node_edges = edges_by_source.get(str(node.get("id")), [])
         if len(node_edges) != 1:
             errors.append(f"{node.get('id')}: Related Work node must have exactly one semantic edge")
         elif not any(kind == node_edges[0].get("kind") for kind in supported_kinds.values()):
@@ -393,7 +396,7 @@ def validate_related_work_plan(ir: Mapping[str, Any], plan: Mapping[str, Any], p
         elif not set(node_edges[0].get("basis_evidence_ids", [])).issubset(set(description_ids)):
             errors.append(f"{node.get('id')}: edge basis is outside its description Evidence")
     for edge in plan.get("edges", []):
-        if edge.get("source_id") not in allowed_sources or edge.get("target_id") not in node_ids:
+        if edge.get("source_id") not in node_ids or edge.get("target_id") not in allowed_targets:
             errors.append(f"{edge.get('id')}: edge endpoint is unknown")
         if edge.get("kind") not in relation_kinds:
             errors.append(f"{edge.get('id')}: unsupported Related Work relation")

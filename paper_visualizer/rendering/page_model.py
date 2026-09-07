@@ -21,7 +21,7 @@ from ..visuals import validate_visual_plan
 
 
 SCHEMA_VERSION = "1.0.0"
-STAGE_VERSION = "2.0.0"
+STAGE_VERSION = "2.2.0"
 SECTION_NUMBERS = {
     "one_minute_read": "01",
     "research_task": "02",
@@ -47,6 +47,19 @@ SECTION_INTROS = {
     "main_results": "结合论文原图和原表解释主要结果及其意义。",
     "analysis": "汇总消融、参数、效率、鲁棒性、案例与失败分析。",
     "conclusion_limitations": "归纳论文结论、适用边界、局限和未来方向。",
+}
+SECTION_PRESENTATIONS = {
+    "one_minute_read": "briefing_grid",
+    "research_task": "task_canvas",
+    "existing_methods": "provenance_graph",
+    "motivation": "argument_chain",
+    "method_overview": "method_map",
+    "method_details": "process_flow",
+    "training_inference": "execution_track",
+    "experimental_setup": "experiment_blueprint",
+    "main_results": "result_ledger",
+    "analysis": "diagnostic_matrix",
+    "conclusion_limitations": "boundary_map",
 }
 
 
@@ -511,11 +524,11 @@ def _related_component(plan: Mapping[str, Any], evidence: Mapping[str, Mapping[s
     nodes = list(plan.get("nodes", []))
     clusters = list(plan.get("clusters", []))
     cluster_by_id = {item["id"]: item for item in clusters}
-    edge_by_target = {item["target_id"]: item for item in plan.get("edges", [])}
+    edge_by_source = {item["source_id"]: item for item in plan.get("edges", [])}
     resolved: list[dict[str, Any]] = []
     for node in nodes:
         metadata = node.get("metadata", {})
-        edge = edge_by_target.get(node["id"], {})
+        edge = edge_by_source.get(node["id"], {})
         cluster_id = str(edge.get("cluster_id") or (node.get("cluster_ids") or [""])[0])
         cluster = cluster_by_id.get(cluster_id, {})
         evidence_id = (node.get("description", {}).get("evidence_ids") or [None])[0]
@@ -542,9 +555,47 @@ def _related_component(plan: Mapping[str, Any], evidence: Mapping[str, Mapping[s
             "impact_label": impact_by_kind.get(cluster["id"].removeprefix("cluster:"), ("研究脉络", ""))[0],
             "nodes": members,
         })
+    canvas_width = 1320
+    lane_top = 30
+    graph_edges: list[dict[str, Any]] = []
+    hubs: list[dict[str, Any]] = []
+    for group in relation_groups:
+        row_count = max(1, (len(group["nodes"]) + 2) // 3)
+        lane_height = max(150, 72 + row_count * 88)
+        group["position"] = {"y": lane_top, "height": lane_height}
+        hub = {
+            "id": f"hub:{group['kind']}", "kind": group["kind"], "label": group["label"],
+            "count": len(group["nodes"]), "position": {"x": 860, "y": lane_top + lane_height / 2 - 30},
+            "size": {"width": 170, "height": 60},
+        }
+        hubs.append(hub)
+        for index, node in enumerate(group["nodes"]):
+            node["position"] = {"x": 30 + (index % 3) * 265, "y": lane_top + 52 + (index // 3) * 88}
+            node["size"] = {"width": 230, "height": 68}
+            graph_edges.append({
+                "id": f"visual:{node['id']}", "source_id": node["id"], "target_id": hub["id"],
+                "kind": group["kind"], "evidence_id": node.get("evidence_id"), "semantic": True,
+            })
+        lane_top += lane_height + 18
+    canvas_height = max(620, lane_top + 20)
+    current_node = {
+        "id": str(plan.get("paper_id") or "current-paper"),
+        "title": plan.get("current_paper", {}).get("metadata", {}).get("title"),
+        "year": plan.get("current_paper", {}).get("metadata", {}).get("year"),
+        "position": {"x": 1080, "y": canvas_height / 2 - 58},
+        "size": {"width": 210, "height": 116},
+    }
+    for hub in hubs:
+        graph_edges.append({
+            "id": f"visual:{hub['id']}:terminal", "source_id": hub["id"], "target_id": current_node["id"],
+            "kind": hub["kind"], "evidence_id": None, "semantic": False,
+        })
     return {
         "component": "related_work", "current": plan.get("current_paper", {}).get("metadata", {}),
         "current_id": plan.get("paper_id"), "nodes": resolved, "relation_groups": relation_groups,
+        "hubs": hubs, "graph_edges": graph_edges, "current_node": current_node,
+        "canvas": {"width": canvas_width, "height": canvas_height},
+        "direction": plan.get("policy", {}).get("edge_direction"),
         "warnings": list(plan.get("review", {}).get("warnings", [])),
     }
 
@@ -657,6 +708,7 @@ def build_page_model(
             "id": section["id"].replace(":", "-"), "kind": section["kind"],
             "number": SECTION_NUMBERS.get(section["kind"], ""), "title": section["title"],
             "intro": SECTION_INTROS.get(section["kind"], ""), "status": section["status"],
+            "presentation": SECTION_PRESENTATIONS.get(section["kind"], "process_flow"),
             "fallback_reason": section.get("fallback_reason"), "components": components,
         })
 

@@ -8,12 +8,24 @@ from pathlib import Path
 import pytest
 
 from paper_visualizer.modeling import ModelingError, build_paper_ir, model_parsed_file, reconstruct_evidence
+from paper_visualizer.modeling import builder as builder_module
 from paper_visualizer.parsing import ParseOptions, parse_source
 from paper_visualizer.validation import validate_ir
 
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_HASH = "a" * 64
+
+
+def test_metadata_prefers_title_heading_over_front_matter_notice():
+    pages = [{"blocks": [
+        {"id": "block:notice", "text": "Provided proper attribution is provided, permission is granted.", "role": "body", "font_size_median": 12, "order": 0},
+        {"id": "block:title", "text": "Attention Is All You Need", "role": "heading", "font_size_median": 17, "order": 1},
+        {"id": "block:abstract", "text": "Abstract", "role": "heading", "font_size_median": 12, "order": 2},
+    ]}]
+    metadata = builder_module._paper_metadata({}, pages, [], {"sha256": SOURCE_HASH, "local_pdf": "/tmp/paper.pdf", "original_url": None})
+
+    assert metadata["title"] == "Attention Is All You Need"
 
 
 def _block(page: int, order: int, text: str, role: str = "body") -> dict[str, object]:

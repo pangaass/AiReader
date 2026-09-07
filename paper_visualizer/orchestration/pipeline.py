@@ -167,7 +167,7 @@ def run_pipeline(
     ir_path = paper_dir / "ir" / "paper_ir.json"
     emit("model", "running")
     ir, model_cache_hit = runner.run(
-        stage="model", stage_version="1.3.2", role="knowledge-modeling-lead", reviewed_by="knowledge-modeling-verifier",
+        stage="model", stage_version="1.3.3", role="knowledge-modeling-lead", reviewed_by="knowledge-modeling-verifier",
         inputs={"parsed": parsed, "overlay": overlay}, output_path=ir_path,
         input_paths={"parsed": parsed_path},
         producer=lambda task: build_paper_ir(parsed, overlay=overlay),
@@ -229,9 +229,10 @@ def run_pipeline(
         return value
     emit("related", "running")
     related, related_cache_hit = runner.run(
-        stage="related", stage_version="1.3.2", role="related-work-lead", reviewed_by="related-work-verifier",
+        stage="related", stage_version="2.0.0", role="related-work-lead", reviewed_by="related-work-verifier",
         inputs={"ir": ir, "overlay": related_overlay, "verify": options.verify_related_work, "max_queries": options.max_related_queries},
         input_paths={"ir": ir_path, "content": content_path}, output_path=related_path, producer=produce_related,
+        schema_version="2.0.0",
         validator=lambda value: validate_related_work_plan(ir, value, root),  # type: ignore[arg-type]
         status_resolver=lambda value: "passed" if value.get("review", {}).get("status") == "passed" else "needs_review",  # type: ignore[union-attr]
     )
@@ -241,7 +242,7 @@ def run_pipeline(
     page_model_path = paper_dir / "plans" / "page_model.json"
     emit("page", "running")
     page_model, page_cache_hit = runner.run(
-        stage="page", stage_version="2.0.0", role="page-generation-lead", reviewed_by="page-generation-verifier",
+        stage="page", stage_version="2.2.0", role="page-generation-lead", reviewed_by="page-generation-verifier",
         inputs={"ir": ir, "content": content, "visual": visuals, "related": related, "allow_unreviewed": options.allow_unreviewed},
         input_paths={"ir": ir_path, "content": content_path, "visual": visual_path, "related": related_path},
         output_path=page_model_path,
@@ -254,7 +255,7 @@ def run_pipeline(
     html_path = output_path or root / "output" / f"{paper_id}-visualizer.html"
     emit("render", "running")
     html, render_cache_hit = runner.run(
-        stage="render", stage_version="1.2.0", role="html-generation-lead", reviewed_by="html-generation-verifier",
+        stage="render", stage_version="1.4.0", role="html-generation-lead", reviewed_by="html-generation-verifier",
         inputs={"page_model": page_model, "templates": _tree_digest((root / "templates",)), "embed_local_pdf": options.embed_local_pdf},
         input_paths={"page_model": page_model_path},
         output_path=html_path, kind="html", schema_version="html5",

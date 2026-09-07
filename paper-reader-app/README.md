@@ -18,7 +18,7 @@ npm start
 
 点击中栏的文字卡片、公式变量、图表节点、论文图片、表格数据或 Related Work 引文，右栏会跳转并高亮原文。已生成论文优先使用 Paper IR 中 Evidence ID 对应的精确页码与坐标；其他本地 PDF 使用页码、类型和文本匹配作为回退。
 
-“本地解析”设置包含 Endpoint、Token 和 Model Name。Token 使用 Electron 系统安全存储加密保存；现有 Visualizer 与 PDF 阅读无需 Token，只有主动启用 LLM 表格增强时才会访问配置的 Endpoint。
+右上角“设置”包含两组配置：阅读外观、内容密度、默认侧栏、PDF 缩放、是否恢复上次论文，以及 Visualizer 构建所用的 Endpoint、Token 和 Model Name。Token 使用 Electron 系统安全存储加密保存；现有 Visualizer 与 PDF 阅读无需 Token。
 
 ## 在应用中构建新论文
 
@@ -29,7 +29,7 @@ npm start
 
 阶段结果保存在项目的 `artifacts/<paper-id>/`，最终页面保存在 `output/<paper-id>-visualizer.html`。构建支持阶段缓存，中断后再次点击可以复用已完成阶段。
 
-本地解析不需要网络。若需要补充识别复杂表格，点击右上角“模型已配置”，再选择“启用并重新解析”。
+本地解析不需要网络。配置模型后，Electron 一键构建会把配置交给现有 Harness 流水线；阅读偏好保存后立即生效。
 
 LLM 表格 Harness 分两阶段运行：
 

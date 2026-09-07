@@ -342,6 +342,11 @@ function registerIpc() {
                 endpoint: document.querySelector('#api-endpoint')?.value || null,
                 model: document.querySelector('#model-name')?.value || null,
                 tokenStored: document.querySelector('#api-key')?.placeholder === '已安全保存',
+                theme: document.querySelector('#theme-setting')?.value || null,
+                density: document.querySelector('#density-setting')?.value || null,
+                sidebarVisible: Boolean(document.querySelector('#sidebar-setting')?.checked),
+                pdfZoom: Number(document.querySelector('#pdf-zoom-setting')?.value || 0),
+                reopenLast: Boolean(document.querySelector('#reopen-setting')?.checked),
               },
               buildButton: {
                 text: document.querySelector('#build-button')?.textContent || null,

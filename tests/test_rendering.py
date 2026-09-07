@@ -70,6 +70,11 @@ def test_page_model_resolves_ir_and_never_serializes_local_paths(tmp_path: Path)
     assert validate_page_model(model, ROOT) == []
     assert len(model["sections"]) == 11
     assert model["sections"][0]["kind"] == "one_minute_read"
+    assert [section["presentation"] for section in model["sections"]] == [
+        "briefing_grid", "task_canvas", "provenance_graph", "argument_chain", "method_map",
+        "process_flow", "execution_track", "experiment_blueprint", "result_ledger",
+        "diagnostic_matrix", "boundary_map",
+    ]
     assert "hero" not in model
     assert model["paper"]["pdf_url"] is None
     assert str(tmp_path) not in str(model)
@@ -97,6 +102,11 @@ def test_renderer_is_single_file_escaped_and_accessible(tmp_path: Path):
     assert html.count('<article class="quick-read-cell"') == 3
     assert "@media(max-width:420px){.quick-read-grid{grid-template-columns:1fr}" in html
     assert 'class="panel story-flow story-flow-' in html
+    assert 'data-presentation="task_canvas"' in html
+    assert 'class="panel task-canvas"' in html
+    assert 'data-presentation="method_map"' in html
+    assert 'data-presentation="experiment_blueprint"' in html
+    assert 'data-presentation="result_ledger"' in html
     story_steps = re.findall(r'<article class="story-step".*?</article>', html, re.S)
     assert story_steps
     assert all("source-chip" not in step and "查看原文" not in step for step in story_steps)

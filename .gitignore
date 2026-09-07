@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.cache/
+*.egg-info/
 cache/
 artifacts/
 output/
@@ -12,3 +14,5 @@ artifacts/*/parsed/figures/
 tmp/
 .env
 paper-reader-app/node_modules/
+/reference/
+/-

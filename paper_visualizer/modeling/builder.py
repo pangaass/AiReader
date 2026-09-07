@@ -1164,11 +1164,20 @@ def _paper_metadata(parsed: Mapping[str, Any], pages: list[dict[str, Any]], sect
     first_page_blocks = [block for block in pages[0]["blocks"] if block["role"] not in {"header", "footer"}]
     title = str(supplied.get("title") or "").strip()
     if not title:
+        excluded = re.compile(r"\b(?:arxiv|abstract|copyright|all rights reserved|permission|attribution|preprint)\b", re.I)
+        heading_candidates: list[tuple[float, int, str]] = []
         for block in first_page_blocks:
             first_line = next((line.strip() for line in block["text"].splitlines() if line.strip()), "")
-            if first_line and not re.search(r"\barxiv\b", first_line, re.IGNORECASE) and first_line.casefold() != "abstract":
-                title = first_line
-                break
+            if block.get("role") == "heading" and first_line and not excluded.search(first_line):
+                heading_candidates.append((float(block.get("font_size_median") or 0), -int(block.get("order") or 0), first_line))
+        if heading_candidates:
+            title = max(heading_candidates)[2]
+        else:
+            for block in first_page_blocks:
+                first_line = next((line.strip() for line in block["text"].splitlines() if line.strip()), "")
+                if first_line and not excluded.search(first_line):
+                    title = first_line
+                    break
     original_url = source.get("original_url")
     arxiv_match = _ARXIV_RE.search(str(supplied.get("arxiv_id") or original_url or source.get("local_pdf") or ""))
     year = supplied.get("year")
