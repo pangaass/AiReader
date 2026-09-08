@@ -2,30 +2,35 @@
 
 日期：2026-09-07
 
+> 当前口径更新：原“两步”不再串行。每个 Paper–PPT/Poster pair 同时进行展示侧与 PDF 侧抽取，再以对齐审计驱动 Meta-Harness 优化 PDF 抽取 harness。详见
+> [当前并行需求：Presentation/Paper 抽取与 Meta-Harness 优化](CURRENT_TWO_STEP_PRESENTATION_EXTRACTION_REQUIREMENT.md)。图片和表格当前不要求展开内部内容，只要求和论文 PDF 中的原图、原表、caption、页码与坐标对应上。
+
 ## 1. 当前目标
 
-本项目不是直接训练一个 Poster 或 PPT 生成器。第一目标是利用论文—Poster、论文—PPT 配对中包含的人类科学传播经验，自动优化出一个稳定的论文信息抽取 Harness；Paper Visualizer 是该抽取结果的下游应用。
+本项目不是直接训练一个 Poster 或 PPT 生成器。当前目标是利用约 200 个论文—Poster、论文—PPT 配对样本，把作者真实展示作为弱监督，构建并优化最终可独立运行的 **Paper Extraction Harness**：从论文 PDF 中抽取作者可能选择的核心信息，并按 overview → section → detail 组织，同时保留原文证据。Presentation Extraction Pipeline 与 Paper Extraction Harness 从第一轮起并行运行。
 
 核心目标是：
 
-1. 从 Poster 中学习粗粒度的信息选择、栏目组织、视觉重点和压缩方式。
-2. 从 PPT 中学习细粒度的讲解顺序、内容拆解、渐进展开和证据使用方式。
-3. 先使用可调用 PDF、图片和文件工具的 CLI Agent，逐页或逐区域抽取 Poster/PPT 的文本、图表及页面语义。
-4. 将这些表达结果对齐回论文原文，形成可追溯的弱监督数据。
-5. 使用 Meta-Harness 或 TextGrad 类 Agent 优化器，自动优化论文信息抽取、总结、关系发现和验证 Harness。
-6. 在自动优化之后，通过人工 Gold 和用户阅读行为进一步对齐人类偏好。
-7. 最终生成“海报式总览 + PPT 式细讲 + 可交互关系探索 + 动态全文深挖”的 Paper Visualizer。
+1. 先建立可运行的基础 Paper Extraction Harness，并与 Presentation Extraction Pipeline 一起在 pair 内并行执行。
+2. 从 Poster 中识别作者做了哪些粗粒度信息选择、栏目组织、视觉重点和压缩。
+3. 从 PPT 中识别作者做了哪些细粒度讲解顺序、内容拆解、渐进展开和证据使用。
+4. 对文本、公式、数字、引用、页面角色、栏目角色和讲解结构进行结构化抽取。
+5. 对图片和表格只做来源对齐：匹配论文 PDF 中的 Figure/Table、caption、页码和坐标；当前不要求输出图片或表格内部完整内容。
+6. 将 Presentation Atom 与论文 Evidence Atom 对齐，区分 direct、paraphrase、synthesis、interpretation、external、unmatched 等关系。
+7. 使用 Meta-Harness 或 TextGrad 类 Agent 优化器，根据 Presentation–Paper 对齐误差持续优化论文侧 prompt、工具编排、上下文选择、层级结构、Verifier 和重试策略。
+8. 将稳定的 Paper Extraction Harness 用于只有论文 PDF 的新样本，并最终驱动 Paper Visualizer。
 
 整体流程为：
 
-> Benchmark 配对 → 材料过滤 → CLI Agent 逐页/逐区抽取 → 原文证据对齐 → 冻结监督 IR → Meta-Harness/TextGrad 类优化 → Paper Extractor Harness → 人类对齐 → Visualizer
+> Benchmark 配对 → 材料过滤 → Pair 内并行 Presentation/PDF 多 Agent 抽取 → Presentation–Paper 对齐与误差归因 → Meta-Harness 更新 Paper Extraction Harness → 固定验证集复跑 → 版本选择 → 仅 PDF 推理 → Visualizer
 
-这里明确分成两个相互独立的系统：
+当前阶段是一个反复执行的并行闭环：
 
-1. **数据构建系统**：使用 CLI Agent 批量读取文件，逐页处理 Poster/PPT，生成并冻结监督 IR。
-2. **Harness 优化系统**：使用 Meta-Harness、TextGrad 类方法或自定义 Optimizer，通过程序接口反复运行、评分和更新 Paper Extraction Harness，本身不依赖 CLI Agent。
+1. **并行抽取**：Presentation agent 逐页/逐区域抽取作者展示了什么；Paper agent 独立读取 PDF 并输出同构的粗到细信息层级。
+2. **对齐审计**：独立 judge 比较两侧覆盖、层级、证据、图表与忠实度，区分展示外部内容和论文侧遗漏。
+3. **Meta 优化**：Optimizer 根据跨 pair 误差更新 Paper Extraction Harness，并在固定验证集上复跑。
 
-第二步只消费第一步已经冻结的数据。两者不能在同一个优化循环中同时变化。
+同一次候选比较中冻结 Presentation 侧输出，避免监督目标随 paper prompt 一起变化。只有通过固定验证集的候选才能提升为新的 paper harness 版本。
 
 ## 2. 核心研究假设
 
@@ -93,13 +98,13 @@ Poster 与 PPT 应分别评分。Poster 更重视核心内容覆盖、栏目结�
 
 - 页面标题、栏目角色和一句话主旨。
 - 精确文本块、Bullet、数值、公式、引用及其坐标。
-- 图片类型，如方法图、流程图、结果图、示意图、照片或装饰图。
-- 图片 Caption、坐标轴、图例、标签和 OCR 文字。
-- 图片的可观察内容与大致科学含义。
+- 图片类型，如论文原图复用、方法图改绘、结果图改绘、示意图、照片或装饰图。
+- 图片与论文 PDF 中 Figure、caption、页码和坐标的候选对应关系。
+- 表格与论文 PDF 中 Table、caption、页码和坐标的候选对应关系。
 - 页面中的关键结论、强调对象及其视觉权重。
 - PPT 页面与前后页面的承接关系；Poster Panel 之间的空间和语义关系。
 
-图像字段必须区分“画面中直接观察到的内容”和“Agent 推断的解释”。无法确认的解释应降低置信度，不能写成事实。
+当前阶段图片和表格不要求输出内部完整内容。只有当图片或表格内部可见文字、数字、标签对论文来源对齐有帮助时，才记录简短的可观察描述；不得把图表内容重新生成成事实说明。
 
 ### 4.4 结构化输出
 
@@ -115,16 +120,18 @@ Poster 与 PPT 应分别评分。Poster 更重视核心内容覆盖、栏目结�
 
 随后由文档级 Aggregator 将所有页面合并为 `PresentationDocumentIR`，恢复整套 PPT 的叙事顺序或整张 Poster 的栏目结构。
 
-### 4.5 抽取验证与冻结
+### 4.5 抽取验证与优化准备
 
 页面抽取后必须经过独立 Verifier：
 
 - 检查页面数量、文本覆盖率、坐标合法性和 Schema 合规性。
-- 抽查文本是否与页面一致，图表是否被正确分类。
+- 抽查文本是否与页面一致，公式和数字是否被正确抽取。
+- 检查图片和表格是否只输出对齐信息，而不是展开内部内容。
+- 检查图片/表格对论文 Figure/Table、caption、页码和坐标的候选匹配是否合理。
 - 检查 Agent 是否把推测写成事实，或者漏掉关键结果和 Caption。
 - 对低置信度页面再次抽取或进入人工复核队列。
 
-应先在小规模人工标注页面上把 CLI 抽取流程调稳定，然后冻结抽取器版本，再生成 Meta-Harness 使用的监督数据。不能一边优化论文抽取 Harness，一边持续改变 Poster/PPT 目标，否则评分基准会漂移。完成冻结后，后续 Optimizer 不再调用这套 CLI Agent。
+第一轮约 200 个 PPT/Poster 的 LLM Agent 抽取结果是 seed extraction data，不直接视为完全正确的 Gold。它们需要经过自动校验和少量人工抽查，并在一次候选比较中冻结，作为 Meta-Harness 优化 Paper Extraction Harness 的搜索、验证、测试和评分依据。
 
 ### 4.6 展示原子与论文证据原子
 
@@ -211,40 +218,40 @@ Related Work 不能只抽论文名称，还要抽取当前论文如何描述它�
 
 不同 Benchmark 先转换到统一 IR，再进入优化过程，不能让每个数据集使用一套互不兼容的输出格式。
 
-## 7. 第五阶段：Meta-Harness/TextGrad 类自动优化
+## 7. 第五阶段：Meta-Harness/TextGrad 类自动优化 Paper Extraction Harness
 
 Meta-Harness 不修改基础模型参数，而是在固定模型和工具条件下优化模型外部流程。TextGrad 类方法可以作为另一种优化后端。Optimizer 可以作为 Python 框架或服务运行，直接调用 Worker、评分器和候选 Harness，不需要通过 ZCode CLI 逐轮驱动。
 
-Optimizer 每轮只需要完成：选择一个候选 Harness、在搜索集上运行、根据冻结监督 IR 评分、生成改进建议、更新候选并保存轨迹。Meta-Harness 与 TextGrad 类方法应共享统一的候选接口和评分协议，便于公平比较。
+Optimizer 每轮只需要完成：选择一个候选 Paper Extraction Harness、在搜索集上运行、与冻结的 Presentation IR 和小规模人工 Gold 对齐评分、生成改进建议、更新候选并保存轨迹。Meta-Harness 与 TextGrad 类方法应共享统一的候选接口和评分协议，便于公平比较。
 
-这里需要区分数据生成流程与待优化 Harness：
+当前主要优化对象是 PDF 信息抽取 pipeline：
 
-- `Presentation Extraction Pipeline`：由 CLI Agent 从 Poster/PPT 页面构建监督 IR，调试完成后冻结，不参与后续候选搜索。
-- `Paper Extraction Harness`：只输入论文并预测 `PaperContentIR`，这是 Meta-Harness 主要优化对象。
+- `Presentation Extraction Pipeline`：输入 PPT/Poster 页面或区域，输出 `PresentationPageIR`、`PresentationDocumentIR` 和 `PresentationAtom`，作为版本化、可冻结的弱监督锚点。
+- `Paper Extraction Harness`：只输入论文并预测 `PaperContentIR`。这是当前 Meta-Harness 的直接优化对象。
 
-单个优化样本应是一篇论文。Worker 只看到论文和允许使用的解析工具；评分器读取冻结的 Poster/PPT 监督 IR 与人工 Gold，不能把目标 Poster/PPT 内容直接放进 Worker 上下文。
+单个优化样本是一份论文 PDF。Paper Worker 只看到 PDF 与其确定性解析产物；评分器可以读取冻结的 Presentation IR、人工 Gold 与自动一致性结果，但不得把 Presentation 内容泄漏给 Paper Worker。
 
-第一版不直接搜索整个 Visualizer，而是按模块依次优化：
+第一版不直接搜索整个 Visualizer，而是按 Paper Extraction 的模块依次优化：
 
-1. Salience：从论文选择值得展示的内容。
-2. Evidence Alignment：为展示内容定位可靠原文证据。
-3. Story Planning：组织栏目、讲解顺序和展开层级。
-4. Relation Discovery：发现方法、实验、主张、相关工作和局限之间的关系。
-5. Visualization Planning：选择卡片、流程图、对比表、原图等表达方式。
-6. Dynamic Deep Dive：根据用户兴趣重新检索全文并生成局部解释。
-7. Verification：检查事实、数值、引用、证据和输出格式。
+1. PDF Parsing：稳定提取带页码、坐标、章节和对象标签的内容。
+2. Coarse-to-fine Selection：形成 overview → section → detail 层级。
+3. Formula/Number Extraction：抽取公式、数字、指标和局部上下文。
+4. Figure/Table Selection：登记值得展示的 Figure/Table、caption、页码和用途。
+5. Evidence Atomization：把论文内容拆成可评分、可追溯的 Evidence Atom。
+6. Presentation Alignment：只在评分器中比较 Presentation Atom 与 Paper Evidence Atom。
+7. Verification：检查事实、页码、Schema、图表引用、置信度和失败恢复。
 
 每个模块都应固定输入输出 Schema、基础模型、工具范围、搜索集、验证集、测试集和自动评分器。Proposer 可以修改 Prompt、上下文选择、检索排序、工具编排、校验和重试策略，但不能修改 Gold、评分器和测试集。
 
-推荐先优化 Salience 与 Evidence Alignment，再扩展到 Story Planning 和 Relation Discovery，最后进行端到端 Visualizer 优化。
+推荐先优化问题、方法、结果与结论的层级选择和证据对齐，再扩展到图表、公式、数字、关系与动态深挖。
 
 综合评分可以表示为：
 
 \[
-S=\alpha S_{salience}+\beta S_{evidence}+\gamma S_{structure}+\delta S_{related}-\lambda H-\mu C
+S=\alpha S_{text}+\beta S_{layout}+\gamma S_{alignment}+\delta S_{role}-\lambda H-\mu C
 \]
 
-其中分别衡量核心内容选择、证据准确性、结构完整性、相关工作关系抽取，并惩罚幻觉与运行成本。Poster/PPT 相似度只能作为其中一部分，不能取代事实和证据评分。
+其中分别衡量文本抽取、版面结构、论文对象对齐、页面/区域角色分类，并惩罚幻觉与运行成本。Poster/PPT 页面相似度只能作为其中一部分，不能取代事实、坐标和论文 PDF 对齐评分。
 
 为获得“稳定”而不是偶然的高分结果，每个候选需要在多个学科、多个随机种子和固定验证集上重复运行，同时记录均值、方差、失败率、成本和时延。
 
@@ -285,15 +292,23 @@ Meta-Harness 自动评分提高后，还需要用小规模高质量人工数据�
 
 ## 11. 当前最小可行版本
 
-第一阶段只完成以下闭环：
+当前并行需求先完成以下可扩展闭环：
 
-1. 建立一批可靠的 Paper–Poster 和 Paper–PPT 配对。
-2. 实现 CLI Agent 的逐页/逐区抽取，生成 `PresentationPageIR`。
-3. 在人工标注页面上验证并冻结 Presentation Extraction Pipeline。
-4. 完成展示内容与论文 Evidence 的对齐，生成固定监督数据。
-5. 建立小规模人工 Gold，并划分搜索集、验证集和测试集。
-6. 构建只输入论文的 Paper Extraction Baseline Harness。
-7. 使用 Meta-Harness 或 TextGrad 类 Agent 优化 Salience、Evidence 和 Related Work 抽取。
-8. 验证有效后，再加入叙事、关系、可视化和动态深挖。
+1. 建立约 200 个可靠的 Paper–Poster 和 Paper–PPT 配对。
+2. 用多个 LLM Agent 并行抽取 PPT/Poster 与论文 PDF，生成初始 Presentation IR 与 PaperContentIR。
+3. 抽取作者从论文中选择并总结的文本、公式、数字、引用、页面角色和栏目讲法。
+4. 对图片和表格只输出与论文 PDF 的 Figure/Table、caption、页码和坐标对应关系，不输出图表内部完整内容。
+5. 完成 Presentation Atom 与论文 Evidence Atom 的候选对齐。
+6. 建立自动校验、小规模人工 Gold、搜索集、验证集和测试集。
+7. 使用 Meta-Harness 或 TextGrad 类 Agent 优化 Paper Extraction Harness，并冻结同轮 Presentation 输出。
+8. 验证优化后的 paper harness 相比基础版本在固定 pair 上有稳定提升，最后用未参与搜索的测试集验证。
 
-这一阶段的成功标准不是生成完整页面，而是证明：在推理时不提供 Poster/PPT 的情况下，利用这些人类表达信号优化出的 Harness，能够稳定提升论文核心内容、相关工作和原文证据的抽取质量。
+这一阶段的成功标准不是生成完整页面，而是证明：Presentation 弱监督能驱动 Meta-Harness 把只输入 PDF 的信息抽取改得更接近真实作者展示，并且从粗粒度到细粒度都可追溯、可复核。
+
+## 12. 当前可运行基线
+
+仓库已加入 `alignment_harness/`、真实 pair 下载清单、GLM-5.3-Flash 文本/图像探针、
+分片多 Agent 抽取、独立对齐 judge、Meta prompt 优化、候选晋升门禁与断点续跑。
+首轮两个 smoke pair 的输入限制、分数、失败样本与下一轮门禁记录在
+[GLM-5.3-Flash 对齐 Harness 首轮基线](BASELINE_GLM53_FLASH_ROUND1.md)。这些结果只证明
+工程闭环可运行；约 200 份数据、人工 Gold 和固定 train/validation/test 评测仍属于后续扩容。

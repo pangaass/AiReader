@@ -14,7 +14,7 @@
 
 > 海报式总览 + PPT 式叙事 + 可验证的交互式深读。
 
-当前研究进一步把这一路线定义为两个独立阶段：第一步用 CLI Agent 逐页或逐区域抽取 Poster/PPT 的文本、图片大意、页面角色和叙事顺序，并对齐到论文原文，形成冻结的监督 IR；第二步由 Meta-Harness、TextGrad 类方法或自定义 Optimizer 直接读取这些数据，通过程序化的运行—评分—更新循环，迭代构建只输入论文就能抽取研究故事、方法、实验、相关工作和证据的 Paper Extraction Harness。Optimizer 本身不依赖 CLI Agent。Poster/PPT 未展示的论文内容只标记为 `unlabeled`，不能直接作为负例。
+当前路线不再拆成串行的“两步”：对每个 Paper–PPT/Poster pair，多个 LLM Agent 并行抽取展示侧与论文 PDF，识别作者选择、总结和组织了哪些文本、公式、数字、引用及讲解结构；图片和表格当前不展开内部内容，只和论文 PDF 中的 Figure/Table、caption、页码与坐标对应。独立 Alignment Judge 随后比较两侧结果，Meta-Harness、TextGrad 类方法或自定义 Optimizer 根据跨 pair 误差持续优化只输入 PDF 的 Paper Extraction Harness；同一次候选比较期间冻结 Presentation 输出，避免弱监督目标漂移。
 
 详细目标、过滤规则和实施阶段见：[Paper Visualizer 当前研究目标与数据处理流程](CURRENT_RESEARCH_GOAL_AND_DATA_PIPELINE.md)。
 

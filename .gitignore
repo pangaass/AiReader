@@ -16,3 +16,5 @@ tmp/
 paper-reader-app/node_modules/
 /reference/
 /-
+data/alignment_pairs/
+artifacts/alignment_harness/

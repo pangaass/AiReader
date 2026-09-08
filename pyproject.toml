@@ -10,6 +10,7 @@ requires-python = ">=3.11"
 dependencies = [
   "jinja2>=3.1",
   "jsonschema>=4.20",
+  "json-repair>=0.30",
   "Pillow>=10.0",
   "pypdf>=5.0"
 ]
@@ -21,9 +22,10 @@ test = ["pytest>=8.0"]
 [project.scripts]
 paper-visualizer = "paper_visualizer.cli:main"
 paper-provenance-graph = "paper_visualizer.related.cli:main"
+paper-alignment-harness = "alignment_harness.cli:main"
 
 [tool.setuptools]
-packages = ["paper_visualizer", "paper_visualizer.agents", "paper_visualizer.parsing", "paper_visualizer.modeling", "paper_visualizer.planning", "paper_visualizer.visuals", "paper_visualizer.related", "paper_visualizer.rendering", "paper_visualizer.review", "paper_visualizer.orchestration"]
+packages = ["paper_visualizer", "paper_visualizer.agents", "paper_visualizer.parsing", "paper_visualizer.modeling", "paper_visualizer.planning", "paper_visualizer.visuals", "paper_visualizer.related", "paper_visualizer.rendering", "paper_visualizer.review", "paper_visualizer.orchestration", "alignment_harness"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

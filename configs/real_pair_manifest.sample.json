@@ -1,0 +1,32 @@
+{
+  "description": "Small public smoke set; expand only after license and pair checks.",
+  "pairs": [
+    {
+      "id": "postersum-icml2024-37030",
+      "title": "Regularized Distribution Matching Distillation for One-step Unpaired Image-to-Image Translation",
+      "presentation_type": "poster",
+      "dataset": "PosterSum test split",
+      "role": "smoke_only",
+      "paper_url": "https://arxiv.org/pdf/2406.14762",
+      "presentation_url": "https://icml.cc/media/PosterPDFs/ICML%202024/37030.png",
+      "paper_file": "data/alignment_pairs/postersum-icml2024-37030/paper.pdf",
+      "presentation_file": "data/alignment_pairs/postersum-icml2024-37030/poster.png",
+      "source_license_note": "Research smoke test only; retain source URLs and verify downstream redistribution rights."
+    },
+    {
+      "id": "sciduet-test-955",
+      "title": "NASH: Toward End-to-End Neural Architecture for Generative Semantic Hashing",
+      "presentation_type": "ppt",
+      "dataset": "GEM/SciDuet test split",
+      "role": "smoke_only",
+      "paper_url": "https://arxiv.org/pdf/1805.05361",
+      "presentation_extract": {
+        "url": "https://huggingface.co/datasets/GEM/SciDuet/resolve/main/test.json",
+        "record_index": 0
+      },
+      "paper_file": "data/alignment_pairs/sciduet-test-955/paper.pdf",
+      "presentation_file": "data/alignment_pairs/sciduet-test-955/slides.json",
+      "source_license_note": "SciDuet is Apache-2.0; this public release contains structured slide content rather than slide screenshots."
+    }
+  ]
+}

@@ -63,7 +63,9 @@ npm start
 - [论文研究溯源图设计](docs/PROVENANCE_GRAPH_DESIGN.md)
 - [栏目感知交互与文献任务调研](docs/SECTION_AWARE_INTERACTION_RESEARCH.md)
 - [海报与 PPT Benchmark、可行性和设计建议](docs/POSTER_PPT_REFERENCE_AND_BENCHMARK.md)
+- [当前并行需求：Presentation/Paper 抽取与 Meta-Harness 优化](docs/CURRENT_TWO_STEP_PRESENTATION_EXTRACTION_REQUIREMENT.md)
 - [当前研究目标与数据处理流程](docs/CURRENT_RESEARCH_GOAL_AND_DATA_PIPELINE.md)
+- [GLM-5.3-Flash 对齐 Harness 首轮基线](docs/BASELINE_GLM53_FLASH_ROUND1.md)
 - [当前状态与新窗口交接](docs/CURRENT_STATUS_2026-09-04.md)
 
 ## 验证与示例
@@ -71,6 +73,31 @@ npm start
 ```bash
 .venv/bin/pytest
 ```
+
+## Paper–PPT/Poster 对齐研究 Harness
+
+`alignment_harness/` 是独立于页面生成器的研究闭环。它对每个真实 pair 并行运行
+展示侧与论文侧 agent，把 Poster 切为重叠区域、把 PPT/论文按页分块，再聚合为统一的
+粗粒度—细粒度信息层级。独立 judge 负责对齐评分，meta-agent 根据误差修改的对象仅是
+paper extraction instruction；presentation 抽取在同一轮中作为冻结的弱监督锚点。
+
+当前 Claude Code 调用固定为 `claude --model glm-5.3-flash`。可复现实验命令：
+
+```bash
+python3 scripts/test_glm53_flash.py
+python3 scripts/download_alignment_pairs.py configs/real_pair_manifest.sample.json
+python3 scripts/run_alignment_round.py configs/real_pair_manifest.sample.json \
+  --output artifacts/alignment_harness/round1 --iterations 2
+```
+
+中断后增加 `--resume` 可复用已完成聚合；用
+`--instruction-file configs/paper_harness_candidate_v1.md` 可以从已保存候选继续新一轮。
+每轮会在候选中保留验证分数最高的指令，而不是无条件采用最后一次改写。
+
+示例清单包含一个 PosterSum 原始视觉海报 pair 和一个 SciDuet 结构化 slide pair。
+SciDuet 公共发布物不含原始幻灯片截图，因此运行记录会明确标记其输入形态，不能把它
+用于评估视觉版式。下载物、模型输出和成本日志均位于被 Git 忽略的 `data/` 与
+`artifacts/`；URL、许可说明和可复跑配置保留在版本库中。
 
 公式使用结构化 MathML，变量上下标可独立交互；Related Work 现在渲染为一张由四类来源汇聚到当前论文终点的交互网络，语义边均可回到当前论文的连续原文。正式流水线复跑时，各阶段支持内容哈希缓存：
 
