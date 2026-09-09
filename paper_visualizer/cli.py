@@ -19,6 +19,16 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--force", action="store_true", help="Ignore parse cache")
     parser.add_argument("--verify-related-work", action="store_true", help="Verify citation metadata with AMiner using AMINER_API_KEY")
     parser.add_argument("--llm", action="store_true", help="Use the configured model to write the narrative Visualizer content and metadata")
+    parser.add_argument(
+        "--extraction-harness",
+        action="store_true",
+        help="Use the optimized paper-only GLM harness for evidence-grounded information selection",
+    )
+    parser.add_argument(
+        "--extraction-model",
+        default=None,
+        help="Semantic extraction model (default: PAPER_EXTRACTION_MODEL or glm-5.3-flash)",
+    )
     review_mode = parser.add_mutually_exclusive_group()
     review_mode.add_argument("--allow-unreviewed", dest="allow_unreviewed", action="store_true", help="Generate a visibly marked preview from pending review artifacts (default)")
     review_mode.add_argument("--require-reviewed", dest="allow_unreviewed", action="store_false", help="Stop unless all required human review overlays are present")
@@ -50,6 +60,8 @@ def main(argv: list[str] | None = None) -> int:
             embed_local_pdf=not args.no_embed_pdf,
             require_browser_review=args.require_browser_review,
             use_llm=args.llm,
+            use_extraction_harness=args.extraction_harness,
+            extraction_model=args.extraction_model,
         ),
         progress=progress if args.progress_json else None,
     )

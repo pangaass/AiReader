@@ -223,6 +223,7 @@ async function buildVisualizer(filePath, requestedPaperId) {
     '--project-root', PROJECT_ROOT,
     '--paper-id', paperId,
     '--progress-json',
+    '--extraction-harness',
   ];
   if (settings.apiKey && settings.model) args.push('--llm');
   return new Promise((resolve, reject) => {

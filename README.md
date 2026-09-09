@@ -62,6 +62,7 @@ npm start
 - [产品要求](docs/PRODUCT_REQUIREMENTS_V1.md)
 - [论文研究溯源图设计](docs/PROVENANCE_GRAPH_DESIGN.md)
 - [栏目感知交互与文献任务调研](docs/SECTION_AWARE_INTERACTION_RESEARCH.md)
+- [TableTale 表格—正文叙事对齐借鉴方案](docs/TABLETALE_TABLE_NARRATIVE_DESIGN.md)
 - [海报与 PPT Benchmark、可行性和设计建议](docs/POSTER_PPT_REFERENCE_AND_BENCHMARK.md)
 - [当前并行需求：Presentation/Paper 抽取与 Meta-Harness 优化](docs/CURRENT_TWO_STEP_PRESENTATION_EXTRACTION_REQUIREMENT.md)
 - [当前研究目标与数据处理流程](docs/CURRENT_RESEARCH_GOAL_AND_DATA_PIPELINE.md)

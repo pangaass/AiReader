@@ -11,7 +11,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
+from alignment_harness.llm import ClaudeRunner
 from paper_visualizer.artifacts import atomic_write_json, sha256_file
+from paper_visualizer.extraction import (
+    HARNESS_VERSION,
+    OPTIMIZED_PAPER_INSTRUCTION,
+    apply_semantic_extraction,
+    extract_semantic_content,
+    validate_semantic_extraction,
+)
 from paper_visualizer.modeling import build_paper_ir
 from paper_visualizer.parsing import IngestError, ParseError, ParseOptions, parse_source
 from paper_visualizer.planning import build_content_plan, enrich_content_plan, validate_content_plan
@@ -41,6 +49,10 @@ class PipelineOptions:
     embed_local_pdf: bool = True
     require_browser_review: bool = False
     use_llm: bool = False
+    use_extraction_harness: bool = False
+    extraction_model: str | None = None
+    extraction_timeout_seconds: int = 360
+    extraction_effort: str = "low"
 
 
 def _slug(value: str) -> str:
@@ -153,6 +165,53 @@ def run_pipeline(
     emit("parse", "completed", cache_hit=parse_cache_hit)
     assert isinstance(parsed, dict)
 
+    semantic_extraction: dict[str, Any] | None = None
+    semantic_path = paper_dir / "extraction" / "paper_content.json"
+    if options.use_extraction_harness:
+        extraction_model = (
+            options.extraction_model
+            or os.environ.get("PAPER_EXTRACTION_MODEL")
+            or "glm-5.3-flash"
+        )
+        semantic_agent = ClaudeRunner(
+            extraction_model,
+            timeout_seconds=max(30, options.extraction_timeout_seconds),
+            effort=options.extraction_effort,
+        )
+        emit("semantic_extract", "running", model=extraction_model, harness=HARNESS_VERSION)
+        semantic_value, semantic_cache_hit = runner.run(
+            stage="semantic_extract",
+            stage_version="1.0.2",
+            role="semantic-extraction-lead",
+            reviewed_by="semantic-extraction-evidence-gate",
+            inputs={
+                "parsed": parsed,
+                "model": extraction_model,
+                "harness_version": HARNESS_VERSION,
+                "instruction": OPTIMIZED_PAPER_INSTRUCTION,
+            },
+            input_paths={"parsed": parsed_path},
+            output_path=semantic_path,
+            producer=lambda task: extract_semantic_content(
+                parsed,
+                paper_id=paper_id,
+                runner=semantic_agent,
+                cwd=root,
+            ),
+            validator=validate_semantic_extraction,
+            status_resolver=lambda value: "passed" if value.get("status") == "complete" else "needs_review",  # type: ignore[union-attr]
+            attempts=1,
+        )
+        assert isinstance(semantic_value, dict)
+        semantic_extraction = semantic_value
+        emit(
+            "semantic_extract",
+            "completed",
+            cache_hit=semantic_cache_hit,
+            succeeded_units=semantic_extraction["coverage"]["succeeded_units"],
+            failed_units=semantic_extraction["coverage"]["failed_units"],
+        )
+
     overlay = _load_overlay(paper_dir / "review" / "human_review.json")
     if parsed.get("status") != "passed" and overlay is None and options.allow_unreviewed:
         overlay = {
@@ -167,10 +226,17 @@ def run_pipeline(
     ir_path = paper_dir / "ir" / "paper_ir.json"
     emit("model", "running")
     ir, model_cache_hit = runner.run(
-        stage="model", stage_version="1.3.3", role="knowledge-modeling-lead", reviewed_by="knowledge-modeling-verifier",
-        inputs={"parsed": parsed, "overlay": overlay}, output_path=ir_path,
-        input_paths={"parsed": parsed_path},
-        producer=lambda task: build_paper_ir(parsed, overlay=overlay),
+        stage="model", stage_version="1.4.0", role="knowledge-modeling-lead", reviewed_by="knowledge-modeling-verifier",
+        inputs={"parsed": parsed, "overlay": overlay, "semantic_extraction": semantic_extraction}, output_path=ir_path,
+        input_paths={
+            "parsed": parsed_path,
+            **({"semantic_extraction": semantic_path} if semantic_extraction is not None else {}),
+        },
+        producer=lambda task: (
+            apply_semantic_extraction(build_paper_ir(parsed, overlay=overlay), semantic_extraction)
+            if semantic_extraction is not None
+            else build_paper_ir(parsed, overlay=overlay)
+        ),
         validator=lambda value: validate_ir(dict(value), root),  # type: ignore[arg-type]
     )
     emit("model", "completed", cache_hit=model_cache_hit)
@@ -291,22 +357,25 @@ def run_pipeline(
     emit("review", "completed", cache_hit=review_cache_hit)
     assert isinstance(review, dict)
 
+    manifest_artifacts = {
+        "parsed": str(paper_dir / "parsed" / "parsed_document.json"),
+        "ir": str(ir_path),
+        "content_plan": str(content_path),
+        "visual_plan": str(visual_path),
+        "related_work": str(related_path),
+        "page_model": str(page_model_path),
+        "html": str(html_path),
+        "review_report": str(review_path),
+    }
+    if semantic_extraction is not None:
+        manifest_artifacts["semantic_extraction"] = str(semantic_path)
     manifest = {
         "schema_version": "1.0.0",
         "paper_id": paper_id,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "source_sha256": parsed["source"]["sha256"],
         "status": "review_failed" if review["status"] != "passed" else ("preview" if page_model.get("preview") else "built"),
-        "artifacts": {
-            "parsed": str(paper_dir / "parsed" / "parsed_document.json"),
-            "ir": str(ir_path),
-            "content_plan": str(content_path),
-            "visual_plan": str(visual_path),
-            "related_work": str(related_path),
-            "page_model": str(page_model_path),
-            "html": str(html_path),
-            "review_report": str(review_path),
-        },
+        "artifacts": manifest_artifacts,
         "hashes": {"html": sha256_file(html_path)},
         "related_work_cost": cost,
         "review": {"status": review["status"], **review["summary"]},

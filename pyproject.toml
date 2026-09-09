@@ -25,7 +25,7 @@ paper-provenance-graph = "paper_visualizer.related.cli:main"
 paper-alignment-harness = "alignment_harness.cli:main"
 
 [tool.setuptools]
-packages = ["paper_visualizer", "paper_visualizer.agents", "paper_visualizer.parsing", "paper_visualizer.modeling", "paper_visualizer.planning", "paper_visualizer.visuals", "paper_visualizer.related", "paper_visualizer.rendering", "paper_visualizer.review", "paper_visualizer.orchestration", "alignment_harness"]
+packages = ["paper_visualizer", "paper_visualizer.agents", "paper_visualizer.extraction", "paper_visualizer.parsing", "paper_visualizer.modeling", "paper_visualizer.planning", "paper_visualizer.visuals", "paper_visualizer.related", "paper_visualizer.rendering", "paper_visualizer.review", "paper_visualizer.orchestration", "alignment_harness"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
